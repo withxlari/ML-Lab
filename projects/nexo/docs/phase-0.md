@@ -1,32 +1,57 @@
-# Phase 0 — local foundation
+# Phase 0 complete — local foundation
 
-Date: 2026-10-30.
+Closed on 2026-10-30.
 
-## Agreed scope
+## Scope and decision
 
-The original plan included Supabase configuration in Phase 0. The project owner subsequently agreed to model the data/API first and postpone hosted infrastructure. [ADR 001](decisions/001-phase-0-local-foundation.md) records that change. Database connectivity is not claimed as complete.
+The original plan included Supabase setup in Phase 0. The project owner subsequently agreed to model the data and API before hosted infrastructure. [ADR 001](decisions/001-phase-0-local-foundation.md) records this scope change. This phase is complete as the agreed local foundation; database connectivity has not been implemented or claimed.
 
-## Local validation complete
+## Delivered
 
-- React/TypeScript frontend with public home, exploration, local library and persistent themes.
-- FastAPI backend, validated environment configuration, health contract and OpenAPI.
-- Python 3.12 isolated inside the project.
-- Safe local environment examples and setup/check scripts.
-- Locked dependencies for reproducible installation.
-- 5 API tests and 13 frontend tests passed on 2026-10-30.
-- Ruff, mypy strict, ESLint, Prettier, TypeScript and Vite build passed.
-- Private ML-lab repository created for projects/nexo.
-- Private publication helper and root-monorepo CI preparation.
+- React/TypeScript/Vite frontend with a public home, exploration and browser-local library.
+- Responsive light/dark themes, local font assets and credited editorial imagery.
+- FastAPI application with validated configuration, a typed /health response and OpenAPI.
+- Isolated Python 3.12, virtual environment and dependency lockfiles.
+- Setup scripts that check prerequisites and create ignored .env files without overwriting existing values.
+- Automated linting, formatting, type checks, frontend tests and API tests.
+- Local Git history and a private ML-lab repository with Nexo under projects/nexo.
+- A private-publication helper that refuses a publicly readable destination and excludes generated/private configuration files.
+- GitHub Actions adjusted for the ML-lab project-folder layout.
+- Product, architecture, development, interface, publishing and evaluation documentation.
 
-## Closure checks in progress
+## Verification evidence
 
-- Upload the committed Nexo snapshot.
-- Verify the private repository visibility again after upload.
-- Execute and inspect the first remote CI run.
-- Recheck the local frontend-to-API health request.
+| Check | Result |
+| --- | --- |
+| Installation from lockfiles | scripts/setup.ps1 passed on 2026-10-30 |
+| API tests | 5 passed |
+| Frontend tests | 13 passed |
+| Static quality | Ruff, mypy strict, ESLint, Prettier and TypeScript passed |
+| Production build | Vite passed |
+| Local application routes | /, /explore, /library and /dev/status returned HTTP 200 |
+| API health | Direct request and frontend proxy returned the expected contract |
+| OpenAPI | /openapi.json returned HTTP 200 |
+| Export integrity | All 74 source files matched the committed snapshot by Git object hash before first upload |
+| Git exclusions | No real .env, node_modules, .venv, .runtime or cache files were uploaded |
+| GitHub privacy | Repository private=true and visibility=private after upload |
+| Remote CI | Frontend and backend jobs succeeded on Ubuntu |
 
-## Next phase
+First successful remote run: [Nexo Quality #1](https://github.com/withxlari/ml-lab/actions/runs/41099665915). This verified installation, tests, lint, formatting, types and build outside the development computer.
 
-Design the MediaItem contract and data model; implement the first catalog API with small in-memory data. Database schema/migrations and the eventual Supabase connection follow that design.
+## Private GitHub workspace
 
-See the [evaluation guide](avaliacao-fase-0.md) for the user review and [GitHub notes](github.md) for the ML-lab organization.
+- [ML-lab](https://github.com/withxlari/ml-lab)
+- [Nexo source folder](https://github.com/withxlari/ml-lab/tree/main/projects/nexo)
+- [Actions history](https://github.com/withxlari/ml-lab/actions)
+
+The existing local Nexo folder remains in place. See [publication instructions](github.md) for how the standalone working copy and the grouped repository relate.
+
+## Evaluation and next step
+
+Use the [Portuguese evaluation guide](avaliacao-fase-0.md).
+
+The local development servers were started for review on 2026-10-30. They can be restarted using the guide if the terminals or computer are closed. No public website was deployed.
+
+The next learning task is to define MediaItem fields, types, required/null behavior and validation rules, then implement a Pydantic schema and an in-memory catalog endpoint.
+
+Database/schema/migrations, Supabase, authentication, imported catalog data, server-side user libraries and recommendation models remain future work.

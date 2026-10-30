@@ -2,7 +2,7 @@
 
 A media discovery project connecting movies, series and books through personal preferences.
 
-**Status:** Phase 0 local foundation verified. Private publication and remote CI verification are being finalized. Database setup follows the agreed data-model/API learning step; catalog integration, authentication, server persistence and recommendation models are not implemented.
+**Status:** Phase 0 complete as a local foundation, privately versioned in ML-lab and verified by GitHub Actions. Database setup follows the agreed data-model/API learning step; catalog integration, authentication, server persistence and recommendation models are not implemented.
 
 ## What works today
 
@@ -12,7 +12,7 @@ A media discovery project connecting movies, series and books through personal p
 - FastAPI application with validated environment configuration and OpenAPI documentation.
 - Frontend-to-API health request with loading, error, timeout and retry behavior.
 - Frontend and backend tests, linting, formatting and type checking.
-- Locked dependencies and a GitHub Actions workflow (runs once this repository is pushed).
+- Locked dependencies and GitHub Actions, with both frontend and backend jobs verified successfully on Ubuntu.
 
 ## Local development on Windows
 
@@ -66,7 +66,7 @@ scripts/        Windows setup, development and validation helpers
 
 React → FastAPI → PostgreSQL hosted by Supabase. Supabase Auth will manage identity; business operations will pass through FastAPI. Python pipelines will prepare authorized metadata and generate embeddings outside request handling. The initial recommender will compare a popularity baseline with content-based recommendations.
 
-See [interface and image credits](docs/interface.md), [architecture](docs/architecture.md), [development guide in Portuguese](docs/development.md), [Phase 0 status](docs/phase-0.md) and [product specification](docs/product-specification.md).
+See [current API](docs/api.md), [interface and image credits](docs/interface.md), [architecture](docs/architecture.md), [development guide in Portuguese](docs/development.md), [Phase 0 status](docs/phase-0.md) and [product specification](docs/product-specification.md).
 
 ## Next steps and limits
 

@@ -78,3 +78,8 @@ O agrupamento funciona como um repositório com pastas por projeto. Sua pasta lo
 Seu primeiro exercício continua sendo o desenho de MediaItem: campos, tipos, obrigatoriedade, valores nulos e validações. Depois, você pode implementar um schema Pydantic e a primeira rota de catálogo.
 
 Não foram implementados banco, login, catálogo importado, avaliações em servidor ou recomendador. Esses itens continuam nas fases seguintes. Nenhum site foi colocado em hospedagem pública.
+
+
+## Evidências de fechamento em 30/10/2026
+
+A instalação pelos lockfiles passou. Foram aprovados 5 testes da API e 13 do front-end, além de lint, formatação, tipos e build. As quatro rotas locais responderam HTTP 200; a API e o proxy devolveram o contrato esperado. Os jobs backend e frontend também passaram no primeiro CI do GitHub: https://github.com/withxlari/ml-lab/actions/runs/41099665915. A visibilidade privada foi confirmada após o envio.
