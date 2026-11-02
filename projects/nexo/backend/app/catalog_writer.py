@@ -11,9 +11,10 @@ import json
 from collections.abc import Sequence
 from dataclasses import asdict
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from app.core.config import Settings
+from app.http_pool import urlopen
 from app.observability import LookupStat, log_event
 
 STATS_TIMEOUT = 0.3

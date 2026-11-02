@@ -3,15 +3,17 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from app import observability
 from app.catalog import Catalog, CatalogUnavailable, MediaItem
 from app.core.config import Settings
 from app.data_quality import LibraryPreparation, prepare_library
+from app.http_pool import urlopen
 
 
 class AccountUser(BaseModel):
@@ -147,7 +149,7 @@ class AccountStore:
             method=method,
         )
         try:
-            with urlopen(request, timeout=8) as response:
+            with observability.timed("supabase_account"), urlopen(request, timeout=8) as response:
                 raw = response.read(8_000_001)
                 if len(raw) > 8_000_000:
                     raise HTTPException(503, "A resposta da conta excedeu o tamanho permitido.")
