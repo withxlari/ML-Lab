@@ -19,6 +19,7 @@ from app import observability
 from app.catalog import Catalog, CatalogUnavailable, MediaItem, MediaType, normalize
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
+from app.isbn import book_id, book_slug, first_isbn
 from app.metadata_cache import MetadataCache
 from app.runtime_paths import CACHE_ROOT
 
@@ -38,7 +39,9 @@ GAME_FIELDS = (
     "themes.name,keywords.name,age_ratings.rating_category.rating,"
     "age_ratings.rating_content_descriptions.description,screenshots.image_id"
 )
-BOOK_FIELDS = "key,title,author_name,cover_i,first_publish_year,editions,editions.cover_i"
+BOOK_FIELDS = (
+    "key,title,author_name,cover_i,first_publish_year,isbn,editions,editions.cover_i,editions.isbn"
+)
 
 
 class SourceFailure(Exception):
@@ -273,7 +276,15 @@ class FederatedSearch:
         editions = doc.get("editions", {}).get("docs", [])
         edition: Record = next((row for row in editions if row.get("cover_i")), {})
         cover = edition.get("cover_i") or doc.get("cover_i")
-        return make_item(
+        chosen = edition or (editions[0] if editions else {})
+
+        def isbns(row: Record) -> list[object]:
+            values = row.get("isbn")
+            return values if isinstance(values, list) else []
+
+        # Prefer the edition shown (its cover), then any ISBN of the work.
+        number = first_isbn([*isbns(chosen), *isbns(doc)])
+        item = make_item(
             "open_library",
             "work",
             source_id,
@@ -286,7 +297,11 @@ class FederatedSearch:
             if isinstance(cover, int) and cover > 0
             else None,
             source_url=f"https://openlibrary.org/works/{source_id}",
+            isbn_13=number,
         )
+        if number:
+            item = item.model_copy(update={"id": book_id(number), "slug": book_slug(number)})
+        return item
 
     def books(self, query: str, page: int) -> tuple[list[MediaItem], bool]:
         from app.books import Books

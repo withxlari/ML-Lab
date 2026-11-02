@@ -6,13 +6,13 @@ from datetime import UTC, date, datetime, timedelta
 from itertools import zip_longest
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
-from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, HttpUrl, ValidationError
 
 from app import observability
 from app.books import Books, isbn13
 from app.catalog import MediaItem
+from app.isbn import book_id, book_slug
 from app.search import SourceFailure, clean, year
 
 if TYPE_CHECKING:
@@ -125,8 +125,8 @@ class BookSelection:
                 if item:
                     return item.model_copy(
                         update={
-                            "id": uuid5(NAMESPACE_URL, "https://nexo.local/book/isbn/" + number),
-                            "slug": "book-isbn-" + number,
+                            "id": book_id(number),
+                            "slug": book_slug(number),
                             "publisher": clean(row.get("editora"), 500) or item.publisher,
                             "description": clean(extra.get("sinopse")) or item.description,
                             "poster_path": item.poster_path
@@ -141,8 +141,8 @@ class BookSelection:
                     )
 
                 return MediaItem(
-                    id=uuid5(NAMESPACE_URL, "https://nexo.local/book/isbn/" + number),
-                    slug="book-isbn-" + number,
+                    id=book_id(number),
+                    slug=book_slug(number),
                     title=title,
                     media_type="book",
                     isbn_13=number,

@@ -3,38 +3,19 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
-from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import ValidationError
 
 from app.catalog import MediaItem
+from app.isbn import book_id, book_slug, first_isbn, normalize_isbn
 from app.search import NotConfigured, SourceFailure, clean, make_item, year
 
 if TYPE_CHECKING:
     from app.search import FederatedSearch
 
 
-def isbn13(value: object) -> str | None:
-    if not isinstance(value, str):
-        return None
-    digits = re.sub(r"[\s-]", "", value)
-    if len(digits) == 10 and re.fullmatch(r"[0-9]{9}[0-9Xx]", digits):
-        if (
-            sum(int(c) * (10 - i) for i, c in enumerate(digits[:9]))
-            + (10 if digits[-1].upper() == "X" else int(digits[-1]))
-        ) % 11:
-            return None
-        stem = "978" + digits[:9]
-        digits = stem + str(
-            (-sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(stem))) % 10
-        )
-    if not re.fullmatch(r"97[89][0-9]{10}", digits):
-        return None
-    return (
-        digits
-        if sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(digits)) % 10 == 0
-        else None
-    )
+# Kept for existing imports; app/isbn.py is the single implementation.
+isbn13 = normalize_isbn
 
 
 def cover_url(links: dict[str, Any], volume_id: str) -> str | None:
@@ -78,9 +59,7 @@ class Books:
             raise SourceFailure("Invalid book volume identity.")
         info = raw["volumeInfo"]
         identifiers = info.get("industryIdentifiers", [])
-        number = next(
-            (valid for entry in identifiers if (valid := isbn13(entry.get("identifier")))), None
-        )
+        number = first_isbn(entry.get("identifier") for entry in identifiers)
         title = clean(info.get("title"), 500)
         subtitle = clean(info.get("subtitle"), 500)
         item = make_item(
@@ -107,12 +86,7 @@ class Books:
             aliases=[subtitle] if subtitle else [],
         )
         if number:
-            item = item.model_copy(
-                update={
-                    "id": uuid5(NAMESPACE_URL, "https://nexo.local/book/isbn/" + number),
-                    "slug": "book-isbn-" + number,
-                }
-            )
+            item = item.model_copy(update={"id": book_id(number), "slug": book_slug(number)})
         return item
 
     def google(
@@ -174,6 +148,8 @@ class Books:
             if items:
                 return items[0].model_copy(
                     update={
+                        "id": book_id(number),
+                        "slug": book_slug(number),
                         "isbn_13": number,
                         "title": title,
                         "creators": items[0].creators or [author],
