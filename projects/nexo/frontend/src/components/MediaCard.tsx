@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import { Icon } from './Icon'
 import { statusLabel } from '../data/library'
 import { mediaLabels, type MediaItem } from '../data/selection'
 import { useCoverGate } from '../hooks/useCoverGate'
+import { useImageSources } from '../hooks/useImageSources'
+import { coverSources } from '../data/artwork'
 export function Cover({
   item,
   className = '',
@@ -10,15 +11,8 @@ export function Cover({
   item: MediaItem
   className?: string
 }) {
-  const [failedSources, setFailedSources] = useState<string[]>([])
   const gate = useCoverGate(item)
-  const alternate =
-    item.type === 'book' && /^97[89][0-9]{10}$/.test(item.isbn13 ?? '')
-      ? `https://covers.openlibrary.org/b/isbn/${item.isbn13}-L.jpg?default=false`
-      : ''
-  const source = [item.image, alternate].find(
-    (value) => value && !failedSources.includes(value),
-  )
+  const { source, onError } = useImageSources(coverSources(item))
   if (!source) {
     return (
       <div
@@ -39,7 +33,7 @@ export function Cover({
       alt={`Capa de ${item.title}`}
       loading="lazy"
       referrerPolicy="no-referrer"
-      onError={() => setFailedSources((failed) => [...failed, source])}
+      onError={onError}
       className={`aspect-[2/3] w-full object-cover ${className} ${gate.blocked ? 'mature-image-blurred' : ''}`}
     />
   )

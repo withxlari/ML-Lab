@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     `connect-src 'self' ${origins.join(' ')}`,
-    `img-src 'self' data: https://image.tmdb.org https://covers.openlibrary.org https://books.google.com https://bookinfo-imagens-prod.s3.amazonaws.com https://media.kitsu.app https://media.kitsu.io https://images.igdb.com ${origins.join(' ')}`,
+    `img-src 'self' data: https://image.tmdb.org https://covers.openlibrary.org https://archive.org https://*.archive.org https://books.google.com https://bookinfo-imagens-prod.s3.amazonaws.com https://media.kitsu.app https://media.kitsu.io https://images.igdb.com ${origins.join(' ')}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

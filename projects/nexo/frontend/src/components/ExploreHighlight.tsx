@@ -5,6 +5,8 @@ import { getMediaDetails } from '../services/catalog'
 import { Icon } from './Icon'
 import { CoverReveal } from './MediaCard'
 import { useCoverGate } from '../hooks/useCoverGate'
+import { useImageSources } from '../hooks/useImageSources'
+import { coverSources } from '../data/artwork'
 export function ExploreHighlight({
   items,
   onOpen,
@@ -29,6 +31,20 @@ export function ExploreHighlight({
     retry: false,
   })
   const artwork = details.data ?? item
+  const preferredImage =
+    artwork?.backdrop ??
+    (item?.id === 'interstellar'
+      ? '/images/interstellar-backdrop.jpg'
+      : artwork?.image)
+  const artworkImage = useImageSources(
+    artwork
+      ? [
+          preferredImage,
+          ...coverSources(artwork),
+          '/images/poster-placeholder.svg',
+        ]
+      : [],
+  )
   const gate = useCoverGate(artwork)
   useEffect(() => {
     if (
@@ -43,11 +59,6 @@ export function ExploreHighlight({
     return () => window.clearInterval(timer)
   }, [items.length, paused])
   if (!item || !artwork) return null
-  const image =
-    artwork.backdrop ??
-    (item.id === 'interstellar'
-      ? '/images/interstellar-backdrop.jpg'
-      : artwork.image)
   const text =
     item.note ||
     (artwork.description === 'Ainda não temos uma sinopse para este título.'
@@ -74,14 +85,12 @@ export function ExploreHighlight({
             aria-label={`Abrir destaque: ${item.title}`}
           >
             <img
-              key={image}
-              src={image}
+              key={artworkImage.source}
+              src={artworkImage.source}
               alt={`Capa de ${item.title}`}
               className={gate.blocked ? 'mature-image-blurred' : ''}
-              onError={(event) => {
-                event.currentTarget.onerror = null
-                event.currentTarget.src = '/images/poster-placeholder.svg'
-              }}
+              onError={artworkImage.onError}
+              referrerPolicy="no-referrer"
             />
           </button>
           <CoverReveal item={artwork} />

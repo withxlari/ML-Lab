@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { useState } from 'react'
+import { useImageSources } from '../hooks/useImageSources'
 import { Icon } from '../components/Icon'
 import { Cover } from '../components/MediaCard'
 import { HeroFan, CoverMarquee } from '../components/HeroFan'
@@ -158,8 +158,10 @@ function CategoryShelf({
   type: MediaType
   artwork?: string
 }) {
-  const [failed, setFailed] = useState(false)
-  const image = !failed && artwork ? artwork : categoryArtwork[type]
+  const { source: image, onError } = useImageSources([
+    artwork,
+    categoryArtwork[type],
+  ])
   return (
     <Link
       className={`home-shelf-card home-shelf-${type}`}
@@ -172,7 +174,8 @@ function CategoryShelf({
           src={image}
           alt=""
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={onError}
+          referrerPolicy="no-referrer"
         />
       )}
       <span className="home-shelf-label">{categoryLabels[type]}</span>

@@ -10,6 +10,7 @@ test('a failed book cover tries one ISBN alternative and accepts a fresh image l
     ...toMediaItem(seed[0]),
     type: 'book' as const,
     isbn13: '9780062662590',
+    backdrop: undefined,
   }
   const view = render(<Cover item={item} />)
   fireEvent.error(screen.getByRole('img'))
@@ -34,6 +35,29 @@ test('a failed book cover tries one ISBN alternative and accepts a fresh image l
     'https://books.google.com/books/content?id=fresh',
   )
 })
+
+test.each(['movie', 'series', 'book', 'manga', 'game'] as const)(
+  '%s can use its alternate artwork after a cover error and recover with a new cover',
+  (type) => {
+    const item = {
+      ...toMediaItem(seed[0]),
+      type,
+      backdrop: 'https://image.tmdb.org/t/p/w1280/alternate.jpg',
+    }
+    const view = render(<Cover item={item} />)
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.getByRole('img')).toHaveAttribute('src', item.backdrop)
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.getByRole('img')).toHaveAccessibleName(
+      `Capa indisponível: ${item.title}`,
+    )
+    view.rerender(<Cover item={{ ...item, image: '/images/recovered.jpg' }} />)
+    expect(screen.getByRole('img')).toHaveAttribute(
+      'src',
+      '/images/recovered.jpg',
+    )
+  },
+)
 test('adult cover stays blurred on hover and a click reveals without opening details or saving', async () => {
   const item = {
     ...toMediaItem(seed[0]),
