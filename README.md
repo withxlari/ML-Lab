@@ -1,24 +1,24 @@
 # ML Lab
 
-A private workspace for machine learning and AI engineering projects.
+Projetos de aprendizado de máquina e engenharia de IA.
 
 ## Projects
 
 | Project | Description | Status |
 | --- | --- | --- |
-| [Nexo](projects/nexo) | Cross-media discovery and recommendation project for movies, series and books | Phase 0: local foundation |
+| [Nexo](projects/nexo) | Filmes, séries, livros, mangás e jogos: catálogo, perfis e recomendações | Em desenvolvimento |
 
 Each project has its own source, dependency lockfiles, setup instructions and documentation. Add new projects under projects/<project-name>/ and register them in this table.
 
 ## Nexo
 
-Start with [the project README](projects/nexo/README.md) and [the development guide](projects/nexo/docs/development.md).
+Comece pelo [README do Nexo](projects/nexo/README.md).
 
 From a fresh clone:
 
     cd projects/nexo
     .\scripts\setup.ps1
 
-The root GitHub Actions workflow validates Nexo from its project subdirectory. No website is deployed by this repository.
+O workflow do GitHub Actions valida o Nexo a partir de sua pasta. O site e a API têm configurações de hospedagem na Vercel.
 
-Visibility: private. Do not add datasets, credentials or local environments to Git.
+Repositório público. Não envie dados privados, credenciais, modelos ou ambientes locais para o Git.
