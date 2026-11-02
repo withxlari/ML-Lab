@@ -2,7 +2,7 @@
 
 # ML Lab
 
-**Machine learning experiments. Working applications. Lessons along the way.**
+**Machine learning experiments. Working applications.**
 
 A personal collection of projects in machine learning and AI engineering, connecting data, models, and the people who use them.
 
