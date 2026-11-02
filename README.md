@@ -1,6 +1,6 @@
 # ML Lab
 
-Projetos de aprendizado de máquina e engenharia de IA.
+Projetos de Machine Learning & AI Engineer.
 
 ## Projects
 
