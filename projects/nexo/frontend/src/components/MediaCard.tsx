@@ -10,12 +10,19 @@ export function Cover({
   item: MediaItem
   className?: string
 }) {
-  const [failed, setFailed] = useState(false)
+  const [failedSources, setFailedSources] = useState<string[]>([])
   const gate = useCoverGate(item)
-  if (!item.image || failed) {
+  const alternate =
+    item.type === 'book' && /^97[89][0-9]{10}$/.test(item.isbn13 ?? '')
+      ? `https://covers.openlibrary.org/b/isbn/${item.isbn13}-L.jpg?default=false`
+      : ''
+  const source = [item.image, alternate].find(
+    (value) => value && !failedSources.includes(value),
+  )
+  if (!source) {
     return (
       <div
-        className={`flex aspect-[2/3] flex-col justify-between bg-accent p-4 text-accent-foreground ${className}`}
+        className={`cover-fallback flex aspect-[2/3] flex-col justify-between bg-accent p-4 text-accent-foreground ${className}`}
         role="img"
         aria-label={`Capa indisponível: ${item.title}`}
       >
@@ -28,10 +35,11 @@ export function Cover({
   }
   const image = (
     <img
-      src={item.image}
+      src={source}
       alt={`Capa de ${item.title}`}
       loading="lazy"
-      onError={() => setFailed(true)}
+      referrerPolicy="no-referrer"
+      onError={() => setFailedSources((failed) => [...failed, source])}
       className={`aspect-[2/3] w-full object-cover ${className} ${gate.blocked ? 'mature-image-blurred' : ''}`}
     />
   )

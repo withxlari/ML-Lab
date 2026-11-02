@@ -153,8 +153,11 @@ export async function getCatalog(
     `${baseUrl}/api/v1/${options.trending ? 'discover' : 'media'}?${params}`,
     {
       signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
-        : AbortSignal.timeout(20000),
+        ? AbortSignal.any([
+            signal,
+            AbortSignal.timeout(options.trending ? 45000 : 20000),
+          ])
+        : AbortSignal.timeout(options.trending ? 45000 : 20000),
     },
   )
   if (!response.ok)

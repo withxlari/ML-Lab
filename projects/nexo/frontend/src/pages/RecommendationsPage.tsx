@@ -551,7 +551,11 @@ function SuggestionRow({
           <button onClick={onOpen}>{item.title}</button>
         </h2>
         <div className="reason">
-          {source && <Cover item={source} />}
+          {source && (
+            <span className="reason-cover" aria-hidden="true">
+              <Cover item={source} />
+            </span>
+          )}
           <p>{description}</p>
         </div>
         {extra && (

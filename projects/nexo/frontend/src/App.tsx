@@ -104,7 +104,7 @@ function NexoApp({
   const [activeItem, setActiveItem] = useState<MediaItem | null>(null)
   const [showCredits, setShowCredits] = useState(false)
   const [message, setMessage] = useState('')
-  const catalog = useQuery({
+  const discoveryCatalog = useQuery({
     queryKey: [
       view === 'saved' ? 'account-library-view' : 'catalog',
       view === 'saved' ? (auth.session?.user.id ?? 'guest') : null,
@@ -151,6 +151,38 @@ function NexoApp({
         : false,
     placeholderData: keepPreviousData,
   })
+  const baseCatalog = useQuery({
+    queryKey: ['base-catalog', filter, offset],
+    queryFn: ({ signal }) =>
+      getCatalog(
+        {
+          mediaType: filter === 'all' ? undefined : filter,
+          limit: pageSize,
+          offset,
+          external: false,
+        },
+        signal,
+      ),
+    enabled:
+      (page === 'home' || page === 'explore') &&
+      !debouncedQuery.trim() &&
+      !discoveryCatalog.data,
+    retry: false,
+    staleTime: 60000,
+  })
+  const showingBaseCatalog =
+    !discoveryCatalog.data &&
+    !!baseCatalog.data &&
+    !debouncedQuery.trim() &&
+    view === 'discover'
+  const catalog = showingBaseCatalog
+    ? {
+        ...discoveryCatalog,
+        data: baseCatalog.data,
+        isPending: false,
+        isError: false,
+      }
+    : discoveryCatalog
   const highlights = useQuery({
     queryKey: ['catalog-highlights'],
     queryFn: ({ signal }) =>
@@ -554,6 +586,8 @@ function NexoApp({
                         ).toLocaleDateString('pt-BR')}
                         .
                       </>
+                    ) : showingBaseCatalog ? (
+                      'Do catálogo do Nexo. As obras em alta aparecem assim que as fontes respondem.'
                     ) : (
                       'Em alta nas fontes do catálogo, com atualização automática.'
                     )}

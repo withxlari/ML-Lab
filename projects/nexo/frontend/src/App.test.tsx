@@ -61,18 +61,39 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/explore')
 })
 test('shows catalog loading, then lets the visitor retry a failed request', async () => {
-  vi.mocked(getCatalog).mockRejectedValueOnce(new Error('offline'))
+  let offline = true
+  vi.mocked(getCatalog).mockImplementation(async (options) => {
+    if (offline) throw new Error('offline')
+    return fixturePage(options)
+  })
   render(<App />)
   expect(screen.getByText('Carregando os títulos…')).toBeInTheDocument()
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Não conseguimos abrir o catálogo.',
   )
+  offline = false
   await userEvent.click(
     screen.getByRole('button', { name: 'Tentar novamente' }),
   )
   expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
     'Explorar',
   )
+})
+
+test('the home shows the stored catalog while the trending sources are still loading', async () => {
+  window.history.replaceState({}, '', '/')
+  vi.mocked(getCatalog).mockImplementation((options) =>
+    options?.trending
+      ? new Promise(() => {})
+      : Promise.resolve(fixturePage(options)),
+  )
+  await renderApp()
+  expect(
+    await screen.findByRole('heading', { name: /O que vem/ }),
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByText('Não conseguimos abrir o catálogo.'),
+  ).not.toBeInTheDocument()
 })
 test('switches theme, saves the preference and restores it after remounting', async () => {
   const view = await renderApp()

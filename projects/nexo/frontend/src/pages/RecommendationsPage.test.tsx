@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
@@ -49,6 +49,40 @@ beforeEach(() => {
     updated_at: '2026-11-01T00:00:00Z',
   })
   vi.mocked(deleteFeedback).mockResolvedValue(undefined)
+})
+
+test('a missing source cover stays inside the thumbnail slot beside its reason', async () => {
+  const source = {
+    ...item,
+    id: 'source-book',
+    type: 'book' as const,
+    title: 'Livro de origem',
+    image: 'https://covers.openlibrary.org/b/id/missing.jpg',
+  }
+  vi.mocked(getRecommendations).mockResolvedValue({
+    ...ready,
+    items: [
+      {
+        ...ready.items[0]!,
+        reasons: [
+          {
+            description: 'A partir do livro de origem.',
+            sourceSlug: source.id,
+            sourceTitle: source.title,
+          },
+        ],
+      },
+    ],
+  })
+  page({ resultLibrary: { savedSnapshots: [source] } })
+  const image = await screen.findByAltText('Capa de Livro de origem')
+  fireEvent.error(image)
+  const fallback = screen.getByRole('img', {
+    name: 'Capa indisponível: Livro de origem',
+    hidden: true,
+  })
+  expect(fallback.parentElement).toHaveClass('reason-cover')
+  expect(screen.getByText('A partir do livro de origem.')).toBeInTheDocument()
 })
 
 test.each([

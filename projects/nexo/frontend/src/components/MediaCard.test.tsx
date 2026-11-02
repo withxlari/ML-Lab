@@ -4,6 +4,36 @@ import { expect, test, vi } from 'vitest'
 import seed from '../../../backend/app/data/catalog.json'
 import { toMediaItem } from '../services/catalog'
 import { MediaCard, Cover, CoverReveal } from './MediaCard'
+
+test('a failed book cover tries one ISBN alternative and accepts a fresh image later', () => {
+  const item = {
+    ...toMediaItem(seed[0]),
+    type: 'book' as const,
+    isbn13: '9780062662590',
+  }
+  const view = render(<Cover item={item} />)
+  fireEvent.error(screen.getByRole('img'))
+  expect(screen.getByRole('img')).toHaveAttribute(
+    'src',
+    'https://covers.openlibrary.org/b/isbn/9780062662590-L.jpg?default=false',
+  )
+  fireEvent.error(screen.getByRole('img'))
+  expect(screen.getByRole('img')).toHaveAccessibleName(
+    `Capa indisponível: ${item.title}`,
+  )
+  view.rerender(
+    <Cover
+      item={{
+        ...item,
+        image: 'https://books.google.com/books/content?id=fresh',
+      }}
+    />,
+  )
+  expect(screen.getByRole('img')).toHaveAttribute(
+    'src',
+    'https://books.google.com/books/content?id=fresh',
+  )
+})
 test('adult cover stays blurred on hover and a click reveals without opening details or saving', async () => {
   const item = {
     ...toMediaItem(seed[0]),
