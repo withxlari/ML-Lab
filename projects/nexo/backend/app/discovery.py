@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app import observability
 from app.book_selection import BookSelection, BookSelectionInfo
 from app.catalog import CatalogPage, CatalogUnavailable, MediaItem, MediaType
 from app.search import GAME_FIELDS, FederatedSearch, NotConfigured, SourceFailure, SourceResult
@@ -124,7 +125,8 @@ class Discovery:
     def page(self, media_type: MediaType | None, limit: int, offset: int) -> DiscoveryPage:
         categories = [media_type] if media_type else TYPES
         with ThreadPoolExecutor(max_workers=5) as executor:
-            feeds = list(executor.map(self.category, categories))
+            futures = [observability.submit(executor, self.category, c) for c in categories]
+            feeds = [future.result() for future in futures]
 
         ranked = [item for row in zip_longest(*(feed[0] for feed in feeds)) for item in row if item]
         try:

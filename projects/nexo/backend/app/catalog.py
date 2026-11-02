@@ -18,6 +18,7 @@ from pydantic import (
     model_validator,
 )
 
+from app import observability
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
 
@@ -156,7 +157,7 @@ class Catalog:
             },
         )
         try:
-            with urlopen(request, timeout=8) as response:
+            with observability.timed("supabase"), urlopen(request, timeout=8) as response:
                 body = response.read(4_000_001)
                 if len(body) > 4_000_000:
                     raise CatalogUnavailable("Catalog page is too large.")

@@ -25,7 +25,8 @@ Site: http://127.0.0.1:5173. API: http://127.0.0.1:8000. Se a porta já estiver 
 - `frontend/`: React, TypeScript e Vite; temas claro/escuro, catálogo, lista, avaliações e perfis.
 - `backend/app/`: FastAPI, integrações de catálogo, validação de contas e recomendações.
 - `backend/tests/`: testes automatizados e testes SQL de privacidade com transação revertida.
-- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql` e `completed-and-search.sql`. O projeto conectado já está configurado.
+- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql`, `completed-and-search.sql` e `book-lookup-stats.sql`. O projeto conectado já está configurado até `completed-and-search.sql`.
+- Medição: toda resposta da API traz `X-Request-Id` e `Server-Timing` (tempo de cache, de cada fonte e total). Com `NEXO_SUPABASE_SECRET_KEY` configurada, cada chamada às fontes de livros vira uma linha em `lookup_stats`; a consulta de taxa de acerto e latência está no fim de `book-lookup-stats.sql`.
 - `scripts/`: execução, verificações e exportação para o repositório privado ML-lab.
 
 ## Dados e recomendações

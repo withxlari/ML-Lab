@@ -10,6 +10,7 @@ from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, HttpUrl, ValidationError
 
+from app import observability
 from app.books import Books, isbn13
 from app.catalog import MediaItem
 from app.search import SourceFailure, clean, year
@@ -156,7 +157,8 @@ class BookSelection:
                 )
 
             with ThreadPoolExecutor(max_workers=3) as executor:
-                items = list(executor.map(resolve, rows))
+                futures = [observability.submit(executor, resolve, row) for row in rows]
+                items = [future.result() for future in futures]
             shelf = BookShelf(
                 items=items,
                 info=BookSelectionInfo(

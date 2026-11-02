@@ -15,6 +15,7 @@ from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, ValidationError
 
+from app import observability
 from app.catalog import Catalog, CatalogUnavailable, MediaItem, MediaType, normalize
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
@@ -99,7 +100,8 @@ class ProviderHTTP:
                 return hit[1]
             host_lock = self.host_locks.setdefault(host, threading.Lock())
         if cache and self.persistent:
-            stored = self.persistent.get(key)
+            with observability.timed("cache"):
+                stored = self.persistent.get(key)
             if stored is not None:
                 return stored
         if not host_lock.acquire(timeout=5):
@@ -119,6 +121,9 @@ class ProviderHTTP:
                 "User-Agent": "Nexo/0.1 (educational discovery; https://github.com/withxlari)",
                 **(headers or {}),
             }
+            started = time.perf_counter()
+            ok = False
+            result: Any = None
             try:
                 with urlopen(
                     Request(url, data=data, headers=request_headers), timeout=5
@@ -126,8 +131,11 @@ class ProviderHTTP:
                     body = response.read(4_000_001)
                     if len(body) > 4_000_000:
                         raise SourceFailure("Metadata response is too large.")
-                    result: Any = json.loads(body)
+                    result = json.loads(body)
+                ok = True
             except HTTPError as error:
+                # A 4xx such as 404 is still an answer; timeouts, 5xx and 429 are not.
+                ok = error.code < 500 and error.code != 429
                 if error.code == 429:
                     retry = error.headers.get("Retry-After", "30")
                     self.cooldown[host] = time.monotonic() + (
@@ -136,6 +144,8 @@ class ProviderHTTP:
                 raise SourceFailure("Metadata source unavailable.") from None
             except (URLError, TimeoutError, OSError, ValueError):
                 raise SourceFailure("Could not read metadata source.") from None
+            finally:
+                observability.record_call(host, ok, result, time.perf_counter() - started)
             if cache:
                 if self.persistent:
                     self.persistent.put(key, result, ttl)
@@ -468,7 +478,9 @@ class FederatedSearch:
         collected: list[MediaItem] = []
 
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = {provider: executor.submit(task) for provider, task in tasks.items()}
+            futures = {
+                provider: observability.submit(executor, task) for provider, task in tasks.items()
+            }
             for provider, future in futures.items():
                 try:
                     items, more = future.result()
