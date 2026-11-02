@@ -372,7 +372,7 @@ class FederatedSearch:
                 self.token = response["access_token"]
                 self.token_expiry = time.monotonic() + int(response["expires_in"])
                 self.token_checked = 0.0
-            if time.monotonic() - self.token_checked >= 3600:
+            if self.token_checked == 0.0 or time.monotonic() - self.token_checked >= 3600:
                 try:
                     validation = self.http.request(
                         "https://id.twitch.tv/oauth2/validate",

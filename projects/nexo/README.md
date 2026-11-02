@@ -2,6 +2,8 @@
 
 Plataforma em desenvolvimento para descobrir filmes, séries, livros, mangás e jogos, organizar uma lista pessoal e receber recomendações a partir dos próprios gostos.
 
+Publicado em https://nexo-aiproject.vercel.app. API: https://nexo-api-sooty.vercel.app/health.
+
 ## Rodar localmente
 
 Requisitos: Node.js 24, Python 3.12 e uv. Na primeira instalação, execute `./scripts/setup.ps1` e preencha `backend/.env` e `frontend/.env` usando os respectivos arquivos `.env.example`.

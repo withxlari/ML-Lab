@@ -103,7 +103,8 @@ def test_kitsu_parser_excludes_novels_and_uses_aliases(search: FederatedSearch) 
     assert items[0].description == "Story"
 
 
-def test_igdb_authentication_uses_post_body_and_caches_token() -> None:
+@pytest.mark.parametrize("clock", [12.0, 7200.0])
+def test_igdb_authentication_uses_post_body_and_caches_token(clock: float) -> None:
     settings = Settings(
         _env_file=None, igdb_client_id="client-id", igdb_client_secret="private-secret"
     )
@@ -117,16 +118,19 @@ def test_igdb_authentication_uses_post_body_and_caches_token() -> None:
         "platforms": [{"name": "PC"}],
         "involved_companies": [{"developer": True, "company": {"name": "CD Projekt RED"}}],
     }
-    with patch.object(
-        search.http,
-        "request",
-        side_effect=[
-            {"access_token": "private-token", "expires_in": 3600},
-            {"client_id": "client-id", "expires_in": 3600},
-            [game],
-            [game],
-        ],
-    ) as request:
+    with (
+        patch("app.search.time.monotonic", return_value=clock),
+        patch.object(
+            search.http,
+            "request",
+            side_effect=[
+                {"access_token": "private-token", "expires_in": 3600},
+                {"client_id": "client-id", "expires_in": 3600},
+                [game],
+                [game],
+            ],
+        ) as request,
+    ):
         items, _ = search.games("Witcher", 1)
         search.games("Witcher", 2)
     assert request.call_count == 4
