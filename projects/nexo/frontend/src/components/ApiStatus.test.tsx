@@ -3,9 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { ApiStatus } from './ApiStatus'
-
 afterEach(() => vi.unstubAllGlobals())
-
 function renderStatus() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -16,7 +14,6 @@ function renderStatus() {
     </QueryClientProvider>,
   )
 }
-
 test('shows loading and confirms the API response contract', async () => {
   vi.stubGlobal(
     'fetch',
@@ -36,7 +33,6 @@ test('shows loading and confirms the API response contract', async () => {
     await screen.findByText('API conectada. A base do Nexo está no ar.'),
   ).toBeInTheDocument()
 })
-
 test('reports failure and lets the user retry successfully', async () => {
   const fetchMock = vi
     .fn()
@@ -55,7 +51,6 @@ test('reports failure and lets the user retry successfully', async () => {
   expect(await screen.findByText(/API conectada/)).toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledTimes(2)
 })
-
 test('does not show success for an invalid response', async () => {
   vi.stubGlobal(
     'fetch',
@@ -64,7 +59,6 @@ test('does not show success for an invalid response', async () => {
   renderStatus()
   expect(await screen.findByText(/API indisponível/)).toBeInTheDocument()
 })
-
 test('does not show success for an HTTP error', async () => {
   vi.stubGlobal(
     'fetch',

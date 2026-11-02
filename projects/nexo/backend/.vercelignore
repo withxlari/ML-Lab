@@ -1,0 +1,8 @@
+.env
+.env.*
+.venv
+.cache
+.model
+tests
+__pycache__
+*.sql

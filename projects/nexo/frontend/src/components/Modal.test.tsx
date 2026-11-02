@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { render, screen } from '@testing-library/react'
 import { afterAll, expect, test, vi } from 'vitest'
 import { Modal } from './Modal'
-
 const originalShow = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'showModal',
@@ -11,7 +10,6 @@ const originalClose = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
 )
-
 afterAll(() => {
   for (const [name, descriptor] of [
     ['showModal', originalShow],
@@ -22,9 +20,7 @@ afterAll(() => {
     else Reflect.deleteProperty(HTMLDialogElement.prototype, name)
   }
 })
-
 test('does not treat StrictMode effect cleanup as a user dismissal', () => {
-  // jsdom has no top layer. These shims emit the same lifecycle events as a dialog.
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
     configurable: true,
     value: function (this: HTMLDialogElement) {

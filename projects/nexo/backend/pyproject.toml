@@ -5,6 +5,7 @@ description = "Nexo media discovery and recommendation API"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi==0.162.0",
+    "fastembed==0.9.1",
     "pydantic==2.14.1",
     "pydantic-settings==2.16.2",
     "uvicorn==0.54.0",

@@ -1,81 +1,76 @@
 # Nexo
 
-A media discovery project connecting movies, series and books through personal preferences.
+Plataforma em desenvolvimento para descobrir filmes, séries, livros, mangás e jogos, organizar uma lista pessoal e receber recomendações a partir dos próprios gostos.
 
-**Status:** Phase 0 complete as a local foundation, privately versioned in ML-lab and verified by GitHub Actions. Database setup follows the agreed data-model/API learning step; catalog integration, authentication, server persistence and recommendation models are not implemented.
+## Rodar localmente
 
-## What works today
+Requisitos: Node.js 24, Python 3.12 e uv. Na primeira instalação, execute `./scripts/setup.ps1` e preencha `backend/.env` e `frontend/.env` usando os respectivos arquivos `.env.example`.
 
-- Public Portuguese home plus separate exploration and local-library pages, using the Cotton, Cherry Red, Maroon and Noir Black palette.
-- Persistent light/dark themes, self-hosted DM Sans and Newsreader fonts, media-type filters, search, native detail dialogs and a browser-local saved list.
-- React and TypeScript with strict type checking, Vite and Tailwind CSS.
-- FastAPI application with validated environment configuration and OpenAPI documentation.
-- Frontend-to-API health request with loading, error, timeout and retry behavior.
-- Frontend and backend tests, linting, formatting and type checking.
-- Locked dependencies and GitHub Actions, with both frontend and backend jobs verified successfully on Ubuntu.
-
-## Local development on Windows
-
-![Nexo initial interface](docs/nexo-preview.png)
-
-Prerequisites: Node.js 24, npm, Git and uv. The setup script downloads Python 3.12 into the ignored `.runtime/python` directory and creates `backend/.venv`. It does not replace your system Python.
-
-When cloning the ML-lab repository, first enter projects/nexo. From the Nexo project root:
-
-```powershell
-.\scripts\setup.ps1
-```
-
-Start the API in one terminal:
+Abra dois terminais na raiz do projeto:
 
 ```powershell
 .\scripts\backend.ps1 dev
 ```
 
-Start the interface in another terminal:
-
 ```powershell
-cd frontend
-npm.cmd run dev
+npm.cmd --prefix frontend run dev
 ```
 
-Open [Nexo home](http://127.0.0.1:5173), [Explore](http://127.0.0.1:5173/explore), [local library](http://127.0.0.1:5173/library) or [API documentation](http://127.0.0.1:8000/docs). Development-only API diagnostics are at /dev/status.
+Site: http://127.0.0.1:5173. API: http://127.0.0.1:8000. Se a porta já estiver ocupada, confira se o servidor já está aberto antes de iniciar outro.
 
-No credentials are needed for the current foundation. Optional configuration examples are in `frontend/.env.example` and `backend/.env.example`. Copy them to `.env` in their respective directories when needed. Never commit real credentials.
+## Estrutura
 
-Run all local checks:
+- `frontend/`: React, TypeScript e Vite; temas claro/escuro, catálogo, lista, avaliações e perfis.
+- `backend/app/`: FastAPI, integrações de catálogo, validação de contas e recomendações.
+- `backend/tests/`: testes automatizados e testes SQL de privacidade com transação revertida.
+- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql` e `completed-and-search.sql`. O projeto conectado já está configurado.
+- `scripts/`: execução, verificações e exportação para o repositório privado ML-lab.
+
+## Dados e recomendações
+
+Filmes e séries usam TMDB; livros priorizam Google Books e edições em português, com Open Library como alternativa. A seleção brasileira vem da lista pública BookInfo, com fonte e período exibidos e cache de 24 horas. Mangás usam Kitsu e jogos usam IGDB. O catálogo inicial não representa todas as obras disponíveis nas buscas externas.
+
+A recomendação combina embeddings multilíngues MiniLM, gêneros, notas, favoritos, Top 5 e preferências escritas. Avaliações negativas também influenciam. O modelo roda no backend; textos privados não são enviados a uma API externa de IA. Os pesos são heurísticos e a qualidade ainda precisa de avaliação com usuários reais. Há experimentos didáticos anteriores preservados no backend.
+
+Para preparar o modelo em uma instalação nova, dentro de `backend/`:
+
+```powershell
+uv run python -m app.semantic
+```
+
+Metadados públicos e vetores ficam em `.cache/`, com validade e limites de tamanho. As consultas públicas são reaproveitadas; trocar o destaque não faz uma nova busca. A interface espera uma pausa de 450 ms ao digitar. Não são gravados tokens ou textos privados no cache público.
+
+## Conta e privacidade
+
+Explorar é público. Guardar, avaliar, favoritar e seguir exigem conta. Supabase Auth valida a sessão; a API usa o JWT do usuário e o banco aplica RLS por proprietário. A biblioteca e os gostos permanecem privados.
+
+Em Pessoas, a busca por nome ou @usuário encontra apenas perfis publicados. Nas sugestões, “Já assisti”, “Já li” e “Já joguei” adicionam a obra como concluída. “Gostei” e “Não gostei” são opiniões privadas que influenciam as recomendações, sem criar uma nota em estrelas. Essa opinião pode ser alterada ou removida na própria lista.
+
+O perfil público é opcional e reúne Top 5 e avaliações explicitamente públicas. Nas configurações de perfil, é possível mostrar totais de obras concluídas e favoritos, seguidores e quem se segue. Os controles novos começam desligados. Publicar um total não publica os títulos privados. Perfis fechados não aparecem nas listas públicas de conexões.
+
+Os agregados públicos são calculados por funções limitadas no schema interno `nexo_private`, com caminho fixo, verificação de perfil publicado e das opções de visibilidade. O schema não é exposto no Data API. As funções públicas são invoker; acesso direto às tabelas privadas continua bloqueado. Avatares ficam em bucket privado, com arquivo WebP de até 1 MB e links assinados de curta duração.
+
+## Segurança e publicação
+
+Credenciais reais ficam somente em `.env` ou nas variáveis secretas do servidor. No frontend, apenas URL da API, URL do Supabase e chave **publishable**. Nunca use service_role ou chaves privadas em variáveis `VITE_`.
+
+A API limita consultas por IP e por processo, restringe corpos a 4 MB e impede cache compartilhado das respostas pessoais. A compilação do frontend inclui CSP; o arquivo `_headers` configura cabeçalhos nos serviços que o suportam. No hospedeiro escolhido, confirme cabeçalhos, HTTPS e limites na borda; múltiplos workers precisam de limitação compartilhada. Não confie em X-Forwarded-For vindo de proxies desconhecidos.
+
+Antes de abrir ao público: configure SMTP próprio, integre o widget de CAPTCHA ao formulário e ative-o no Supabase; ajuste a política de senhas, o domínio HTTPS e as URLs exatas de retorno. Ajuste `NEXO_ENVIRONMENT=production`, `NEXO_CORS_ORIGINS`, `VITE_API_BASE_URL` e URLs públicas do Supabase. O backend precisa de memória para o modelo e volume persistente para o cache; publicar só o frontend não disponibiliza a recomendação.
+
+O Free confirmado na revisão oferece 50 mil usuários ativos por mês, 500 MB de banco e 1 GB de Storage, sujeitos às cotas vigentes. O SMTP padrão é de testes, restrito a membros da equipe e a dois e-mails por hora. A proteção nativa contra senhas vazadas exige Pro ou superior. Consulte os limites atuais em https://supabase.com/pricing e https://supabase.com/docs/guides/auth/auth-smtp.
+
+A revisão não substitui teste de carga ou auditoria independente. O projeto é adequado para preparar uma beta controlada; qualidade das sugestões e capacidade para tráfego público ainda precisam de medição.
+
+## Verificações
 
 ```powershell
 .\scripts\check.ps1
+backend\.venv\Scripts\python.exe scripts/check-secrets.py
 ```
 
-The frontend proxy forwards `/health` to the API on port 8000. Production hosting will need an API URL or reverse proxy; development settings are not a deployment configuration.
+A verificação de segredos examina arquivos candidatos ao Git e o histórico local, sem imprimir valores de credenciais. Mantenha testes, lockfiles, SQLs e licenças no repositório. `.env`, dependências, modelos, caches, builds e ZIPs ficam ignorados. A documentação histórica permanece arquivada localmente em `.cache/reference-docs`, fora do Git.
 
-## Structure
+O projeto é publicado na pasta `projects/nexo` do repositório público ML-Lab. Credenciais, modelos e dados locais não são enviados ao GitHub. Alterações locais precisam de commit e publicação explícita.
 
-```text
-frontend/       UI, API client and component tests
-backend/        API routes, validated settings and backend tests
-ml/             Experiment scope; models will be added in a later phase
-docs/           Product specification, architecture and learning guide
-scripts/        Windows setup, development and validation helpers
-.github/        Continuous integration definition
-```
-
-## Planned architecture
-
-React → FastAPI → PostgreSQL hosted by Supabase. Supabase Auth will manage identity; business operations will pass through FastAPI. Python pipelines will prepare authorized metadata and generate embeddings outside request handling. The initial recommender will compare a popularity baseline with content-based recommendations.
-
-See [current API](docs/api.md), [interface and image credits](docs/interface.md), [architecture](docs/architecture.md), [development guide in Portuguese](docs/development.md), [Phase 0 status](docs/phase-0.md) and [product specification](docs/product-specification.md).
-
-## Next steps and limits
-
-1. Design the MediaItem API contract and implement the first in-memory catalog route.
-2. Design the schema and migrations with SQLAlchemy/Alembic, then configure PostgreSQL/Supabase.
-3. Integrate TMDB and Open Library after reviewing current usage terms.
-4. Add authentication, interactions and personal libraries.
-5. Implement and evaluate real recommendation baselines.
-
-The local health endpoint reports API liveness only. It does not verify database readiness. No ML metrics or personalization results are claimed. MovieLens experiments will not establish cross-media performance by themselves.
-
-Private GitHub workspace: [ML-lab / Nexo](https://github.com/withxlari/ml-lab/tree/main/projects/nexo). See [GitHub organization and publishing](docs/github.md) and the [Phase 0 evaluation guide in Portuguese](docs/avaliacao-fase-0.md). No public website deployment is configured. A code license has not yet been selected.
+Na Vercel, o frontend usa `frontend/vercel.json` e a API usa `backend/vercel.json`. O build da API prepara o modelo em `.model/`; em execução, os caches graváveis usam `/tmp/nexo`. Esse cache é temporário e separado por instância: pode haver novas consultas às fontes após reinícios. Para mais tráfego, substitua-o por um cache compartilhado e aplique limites na borda. Nunca execute o treinamento ou o download do modelo durante uma requisição.

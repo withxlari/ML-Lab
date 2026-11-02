@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from './Icon'
-
 export function Modal({
   titleId,
   onClose,

@@ -3,7 +3,6 @@ export interface HealthResponse {
   service: 'nexo-api'
   version: string
 }
-
 function isHealthResponse(value: unknown): value is HealthResponse {
   return (
     typeof value === 'object' &&
@@ -16,7 +15,6 @@ function isHealthResponse(value: unknown): value is HealthResponse {
     typeof value.version === 'string'
   )
 }
-
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
   const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
   const response = await fetch(`${baseUrl}/health`, {

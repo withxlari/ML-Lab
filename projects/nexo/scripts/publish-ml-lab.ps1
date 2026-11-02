@@ -1,4 +1,4 @@
-param([switch]$Push)
+param([switch]$Push, [switch]$AllowPublic)
 
 $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -8,11 +8,11 @@ $taskProject = Join-Path $taskCheckout 'projects\nexo'
 $taskPrefix = 'projects/nexo/'
 $env:GIT_TERMINAL_PROMPT = '0'
 
-# Fail closed if the destination is publicly readable. A private repo returns
-# 404 without authentication; the normal Git credential manager handles access.
+
+
 try {
     $taskVisibility = Invoke-RestMethod -Uri 'https://api.github.com/repos/withxlari/ml-lab' -Headers @{'User-Agent'='Nexo-Publisher'}
-    if (-not $taskVisibility.private) { throw 'The ML-lab repository is public. Publication stopped.' }
+    if (-not $taskVisibility.private -and -not $AllowPublic) { throw 'Use -AllowPublic to publish to the public ML-lab repository.' }
 }
 catch {
     if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
@@ -63,7 +63,7 @@ foreach ($taskRelative in $taskFiles) {
     [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($taskDestination)) | Out-Null
     [IO.File]::Copy((Join-Path $taskRoot $taskRelative), $taskDestination, $true)
 }
-# Remove only obsolete, tracked files inside this generated Nexo folder.
+
 $taskOldFiles = @(& git -C $taskCheckout -c core.quotepath=false ls-files -- $taskPrefix)
 foreach ($taskOld in $taskOldFiles) {
     if ($taskOld.StartsWith($taskPrefix) -and -not $taskExpected.Contains($taskOld)) {
@@ -76,19 +76,19 @@ foreach ($taskOld in $taskOldFiles) {
 $taskHubReadme = @'
 # ML Lab
 
-A private workspace for machine learning and AI engineering projects.
+Projetos de aprendizado de máquina e engenharia de IA.
 
 ## Projects
 
 | Project | Description | Status |
 | --- | --- | --- |
-| [Nexo](projects/nexo) | Cross-media discovery and recommendation project for movies, series and books | Phase 0: local foundation |
+| [Nexo](projects/nexo) | Filmes, séries, livros, mangás e jogos: catálogo, perfis e recomendações | Em desenvolvimento |
 
 Each project has its own source, dependency lockfiles, setup instructions and documentation. Add new projects under projects/<project-name>/ and register them in this table.
 
 ## Nexo
 
-Start with [the project README](projects/nexo/README.md) and [the development guide](projects/nexo/docs/development.md).
+Start with [the project README](projects/nexo/README.md).
 
 From a fresh clone:
 
@@ -97,7 +97,7 @@ From a fresh clone:
 
 The root GitHub Actions workflow validates Nexo from its project subdirectory. No website is deployed by this repository.
 
-Visibility: private. Do not add datasets, credentials or local environments to Git.
+Do not add private datasets, credentials or local environments to Git.
 '@
 if (-not (Test-Path -LiteralPath (Join-Path $taskCheckout 'README.md'))) {
     [IO.File]::WriteAllText((Join-Path $taskCheckout 'README.md'), $taskHubReadme)
@@ -114,7 +114,7 @@ Invoke-CheckedGit -C $taskCheckout add -- projects/nexo .github/workflows/nexo-q
 & git -C $taskCheckout diff --cached --quiet
 if ($LASTEXITCODE -eq 1) {
     $taskSourceCommit = (& git -C $taskRoot rev-parse --short HEAD).Trim()
-    Invoke-CheckedGit -C $taskCheckout commit -m "Update Nexo Phase 0 snapshot ($taskSourceCommit)"
+    Invoke-CheckedGit -C $taskCheckout commit -m "Update Nexo application ($taskSourceCommit)"
 }
 elseif ($LASTEXITCODE -ne 0) { throw 'Unable to inspect the staged publication snapshot.' }
 

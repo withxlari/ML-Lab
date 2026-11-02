@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react'
-import { selection } from '../data/selection'
-
+import type { MediaItem } from '../data/selection'
+import { isStoredMediaItem } from '../services/catalog'
 export type Theme = 'dark' | 'light'
-
 export function readTheme(): Theme {
+  const fallback =
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   try {
     const stored = localStorage.getItem('nexo:theme')
     if (stored === 'dark' || stored === 'light') return stored
   } catch {
-    /* The theme still works when browser storage is unavailable. */
+    return fallback
   }
-  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  return fallback
 }
-
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(readTheme)
   useEffect(() => {
@@ -24,7 +24,7 @@ export function useTheme() {
     try {
       localStorage.setItem('nexo:theme', theme)
     } catch {
-      /* Keep the in-memory choice. */
+      return
     }
   }, [theme])
   return {
@@ -33,7 +33,6 @@ export function useTheme() {
       setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
   }
 }
-
 function readSaved(): string[] {
   try {
     const value: unknown = JSON.parse(
@@ -42,30 +41,52 @@ function readSaved(): string[] {
     return Array.isArray(value)
       ? value.filter(
           (id): id is string =>
-            typeof id === 'string' && selection.some((item) => item.id === id),
+            typeof id === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id),
         )
       : []
   } catch {
     return []
   }
 }
-
 export function useSavedMedia() {
   const [saved, setSaved] = useState<string[]>(readSaved)
+  const [savedSnapshots, setSnapshots] = useState<MediaItem[]>(() => {
+    try {
+      const value: unknown = JSON.parse(
+        localStorage.getItem('nexo:saved-items') ?? '[]',
+      )
+      return Array.isArray(value) ? value.filter(isStoredMediaItem) : []
+    } catch {
+      return []
+    }
+  })
   useEffect(() => {
     try {
       localStorage.setItem('nexo:saved', JSON.stringify(saved))
+      localStorage.setItem('nexo:saved-items', JSON.stringify(savedSnapshots))
     } catch {
-      /* The list remains usable in memory. */
+      return
     }
-  }, [saved])
+  }, [saved, savedSnapshots])
   return {
     saved,
-    toggleSaved: (id: string) =>
+    savedSnapshots,
+    clearSaved: () => {
+      setSaved([])
+      setSnapshots([])
+    },
+    toggleSaved: (item: MediaItem) => {
+      const id = item.id
+      setSnapshots((current) =>
+        saved.includes(id)
+          ? current.filter((entry) => entry.id !== id)
+          : [...current.filter((entry) => entry.id !== id), item],
+      )
       setSaved((current) =>
         current.includes(id)
           ? current.filter((item) => item !== id)
           : [...current, id],
-      ),
+      )
+    },
   }
 }

@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path $PSScriptRoot -Parent
 foreach ($taskCommand in @('git', 'node', 'npm.cmd', 'uv')) {
     if (-not (Get-Command $taskCommand -ErrorAction SilentlyContinue)) {
-        throw "Missing prerequisite: $taskCommand. See docs/development.md."
+        throw "Missing prerequisite: $taskCommand. See README.md."
     }
 }
 foreach ($taskComponent in @('frontend', 'backend')) {
@@ -18,4 +18,4 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Frontend installation failed.' }
 }
 finally { Pop-Location }
-Write-Host 'Nexo is ready. See docs/development.md to start both servers.'
+Write-Host 'Nexo is ready. See README.md to start both servers.'

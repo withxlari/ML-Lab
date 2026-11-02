@@ -1,13 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { getHealth } from '../services/api'
-
 export function ApiStatus() {
   const health = useQuery({
     queryKey: ['health'],
     queryFn: ({ signal }) => getHealth(signal),
-    staleTime: 30_000,
+    staleTime: 30000,
   })
-
   return (
     <aside className="api-status" aria-label="Ambiente de desenvolvimento">
       <div>

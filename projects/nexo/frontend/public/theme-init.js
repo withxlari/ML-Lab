@@ -1,4 +1,3 @@
-// Apply the theme before rendering to avoid a flash of the wrong background.
 try {
   var savedTheme = localStorage.getItem('nexo:theme')
   var initialTheme =

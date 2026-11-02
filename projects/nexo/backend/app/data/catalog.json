@@ -1,0 +1,171 @@
+[
+  {
+    "id": "e5d530fd-6101-440a-a649-afd7fef9619d",
+    "slug": "interstellar",
+    "title": "Interestelar",
+    "original_title": "Interstellar",
+    "media_type": "movie",
+    "release_year": 2014,
+    "creators": [
+      "Christopher Nolan"
+    ],
+    "genres": [
+      "Ficção científica",
+      "Drama"
+    ],
+    "poster_path": "/images/interstellar.jpg",
+    "description": "Com a Terra se tornando inabitável, um grupo de astronautas parte em busca de um novo lar. Cooper deixa os filhos para trás e embarca numa viagem em que tempo e distância ganham outro peso.",
+    "editorial_note": "Uma viagem pelo espaço que, no fundo, é sobre voltar para casa.",
+    "source_url": "https://www.themoviedb.org/movie/157336",
+    "position": 0,
+    "is_active": true
+  },
+  {
+    "id": "931bb51d-9b4c-4e8b-a86e-b30974fb5655",
+    "slug": "budapest",
+    "title": "O Grande Hotel Budapeste",
+    "original_title": null,
+    "media_type": "movie",
+    "release_year": 2014,
+    "creators": [
+      "Wes Anderson"
+    ],
+    "genres": [
+      "Comédia",
+      "Aventura"
+    ],
+    "poster_path": "/images/budapest.jpg",
+    "description": "Um concierge e seu jovem ajudante se envolvem numa disputa por uma herança. Entre fugas, doces e um quadro desaparecido, nasce uma amizade improvável.",
+    "editorial_note": "Para reparar em cada cor, cenário e pequeno absurdo.",
+    "source_url": "https://www.themoviedb.org/movie/120467",
+    "position": 1,
+    "is_active": true
+  },
+  {
+    "id": "40777fdb-1af9-4ee1-9aac-389278e11b1d",
+    "slug": "severance",
+    "title": "Ruptura",
+    "original_title": "Severance",
+    "media_type": "series",
+    "release_year": 2022,
+    "creators": [
+      "Dan Erickson"
+    ],
+    "genres": [
+      "Suspense",
+      "Ficção científica"
+    ],
+    "poster_path": "/images/severance.jpg",
+    "description": "Funcionários de uma empresa passam por um procedimento que separa as memórias do trabalho das memórias pessoais. A rotina começa a desmoronar quando um deles tenta entender o que existe do outro lado.",
+    "editorial_note": "O tipo de série que rende conversa depois de cada episódio.",
+    "source_url": "https://www.themoviedb.org/tv/95396",
+    "position": 2,
+    "is_active": true
+  },
+  {
+    "id": "64b30df0-3756-49b6-8103-2a71ab61f150",
+    "slug": "dune-book",
+    "title": "Duna",
+    "original_title": null,
+    "media_type": "book",
+    "release_year": 1965,
+    "creators": [
+      "Frank Herbert"
+    ],
+    "genres": [
+      "Ficção científica",
+      "Política"
+    ],
+    "poster_path": "/images/dune-book.jpg",
+    "description": "A família Atreides assume o controle de Arrakis, um planeta desértico que produz a substância mais disputada do universo. Paul Atreides se vê no centro de conflitos políticos, religiosos e ecológicos.",
+    "editorial_note": "Política, areia e um planeta inteiro em disputa.",
+    "source_url": "https://openlibrary.org/isbn/9780441172719",
+    "position": 3,
+    "is_active": true
+  },
+  {
+    "id": "b211838e-e0f6-4126-9811-580ca1322089",
+    "slug": "past-lives",
+    "title": "Vidas Passadas",
+    "original_title": "Past Lives",
+    "media_type": "movie",
+    "release_year": 2023,
+    "creators": [
+      "Celine Song"
+    ],
+    "genres": [
+      "Drama",
+      "Romance"
+    ],
+    "poster_path": "/images/past-lives.jpg",
+    "description": "Amigos de infância separados pela imigração se reencontram muitos anos depois. Em alguns dias em Nova York, conversam sobre as vidas que construíram e aquelas que poderiam ter vivido.",
+    "editorial_note": "Para ver sem pressa e deixar a conversa continuar.",
+    "source_url": "https://www.themoviedb.org/movie/666277",
+    "position": 4,
+    "is_active": true
+  },
+  {
+    "id": "75252a7f-648d-424c-844c-d7aaefc2fc5f",
+    "slug": "dark",
+    "title": "Dark",
+    "original_title": null,
+    "media_type": "series",
+    "release_year": 2017,
+    "creators": [
+      "Baran bo Odar",
+      "Jantje Friese"
+    ],
+    "genres": [
+      "Mistério",
+      "Ficção científica"
+    ],
+    "poster_path": "/images/dark.jpg",
+    "description": "O desaparecimento de uma criança expõe os segredos de quatro famílias de uma cidade alemã. A investigação atravessa gerações e coloca em dúvida a relação entre passado, presente e futuro.",
+    "editorial_note": "Pode ser uma boa ideia ter papel e caneta por perto.",
+    "source_url": "https://www.themoviedb.org/tv/70523",
+    "position": 5,
+    "is_active": true
+  },
+  {
+    "id": "ac391e6f-9b7c-4880-aec9-fb7809ebe93c",
+    "slug": "dune",
+    "title": "Duna",
+    "original_title": null,
+    "media_type": "movie",
+    "release_year": 2021,
+    "creators": [
+      "Denis Villeneuve"
+    ],
+    "genres": [
+      "Ficção científica",
+      "Aventura"
+    ],
+    "poster_path": "/images/dune.jpg",
+    "description": "Paul Atreides chega a Arrakis com a família e encontra um planeta marcado pela exploração de sua especiaria. Uma traição muda seu destino e o aproxima do povo que vive no deserto.",
+    "editorial_note": "Um daqueles filmes que pedem a maior tela da casa.",
+    "source_url": "https://www.themoviedb.org/movie/438631",
+    "position": 6,
+    "is_active": true
+  },
+  {
+    "id": "18d91828-4f46-4f2e-9a56-7a31afef2f9a",
+    "slug": "midnight-library",
+    "title": "A Biblioteca da Meia-Noite",
+    "original_title": null,
+    "media_type": "book",
+    "release_year": 2020,
+    "creators": [
+      "Matt Haig"
+    ],
+    "genres": [
+      "Ficção",
+      "Fantasia"
+    ],
+    "poster_path": "/images/midnight-library.jpg",
+    "description": "Nora encontra uma biblioteca onde cada livro permite experimentar uma vida diferente. Ao abrir suas páginas, ela revisita escolhas e descobre os caminhos que não chegou a seguir.",
+    "editorial_note": "Para quem já se pegou pensando: e se eu tivesse escolhido diferente?",
+    "source_url": "https://openlibrary.org/isbn/9780525559474",
+    "position": 7,
+    "is_active": true
+  }
+]
