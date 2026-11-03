@@ -47,6 +47,12 @@ async function expectCards(count: number) {
 async function renderApp() {
   const view = render(<App />)
   await screen.findByRole('heading', { level: 1 })
+  // The header renders before the titles now; wait for the first page too.
+  await waitFor(() =>
+    expect(
+      screen.queryByText('Carregando os títulos…'),
+    ).not.toBeInTheDocument(),
+  )
   return view
 }
 beforeEach(() => {
@@ -95,6 +101,33 @@ test('the home shows the stored catalog while the trending sources are still loa
     screen.queryByText('Não conseguimos abrir o catálogo.'),
   ).not.toBeInTheDocument()
 })
+test('the search field stays usable while a search is still loading', async () => {
+  // Trending never arrives and searches never finish: before the fix the whole page
+  // switched to a loading screen and the field vanished in the middle of typing.
+  vi.mocked(getCatalog).mockImplementation((options) =>
+    options?.trending || options?.query
+      ? new Promise(() => {})
+      : Promise.resolve(fixturePage(options)),
+  )
+  await renderApp()
+  const field = screen.getByRole('searchbox', {
+    name: 'Buscar filmes, séries, livros, mangás ou jogos',
+  })
+  await userEvent.type(field, 'du')
+  // Wait until the 450 ms debounce has fired and the search for "du" is in flight.
+  expect(
+    await screen.findByRole(
+      'heading',
+      { name: 'Resultados para “du”' },
+      { timeout: 2000 },
+    ),
+  ).toBeInTheDocument()
+  expect(field).toBeInTheDocument()
+  expect(field).toHaveFocus()
+  await userEvent.type(field, 'na')
+  expect(field).toHaveValue('duna')
+})
+
 test('switches theme, saves the preference and restores it after remounting', async () => {
   const view = await renderApp()
   await userEvent.click(
