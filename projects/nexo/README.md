@@ -25,7 +25,9 @@ Site: http://127.0.0.1:5173. API: http://127.0.0.1:8000. Se a porta já estiver 
 - `frontend/`: React, TypeScript e Vite; temas claro/escuro, catálogo, lista, avaliações e perfis.
 - `backend/app/`: FastAPI, integrações de catálogo, validação de contas e recomendações.
 - `backend/tests/`: testes automatizados e testes SQL de privacidade com transação revertida.
-- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql` e `completed-and-search.sql`. O projeto conectado já está configurado.
+- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql`, `completed-and-search.sql`, `book-lookup-stats.sql` e `book-catalog-runtime.sql` (este depois de `catalog-discovery.sql`). O banco é sempre atualizado antes do código que depende dele.
+- Medição: toda resposta da API traz `X-Request-Id` e `Server-Timing` (tempo de cache, de cada fonte e total). Com `NEXO_SUPABASE_SECRET_KEY` configurada, cada chamada às fontes de livros vira uma linha em `lookup_stats`; a consulta de taxa de acerto e latência está no fim de `book-lookup-stats.sql`.
+- Catálogo de livros: com `NEXO_CATALOG_SOURCE=supabase` e a chave secreta, todo livro do Google Books ou da Open Library que aparece numa busca ou num detalhe é gravado em `catalog_items` (`origin = 'runtime'`, um por ISBN) depois da resposta. O detalhe de um livro já gravado não chama nenhuma API externa; fichas sem sinopse ou capa são completadas em segundo plano no máximo uma vez por dia. Livros gravados não aparecem na página de descoberta.
 - `scripts/`: execução, verificações e exportação para o repositório privado ML-lab.
 
 ## Dados e recomendações

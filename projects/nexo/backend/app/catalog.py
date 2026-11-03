@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
 from uuid import UUID
 
 from pydantic import (
@@ -18,8 +18,10 @@ from pydantic import (
     model_validator,
 )
 
+from app import observability
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
+from app.http_pool import urlopen
 
 MediaType = Literal["movie", "series", "book", "manga", "game"]
 ShortText = Annotated[str, Field(min_length=1, max_length=500)]
@@ -118,6 +120,12 @@ class MediaItem(BaseModel):
         return value
 
 
+SUPABASE_STAGES = {
+    "search_catalog": "supabase_search",
+    "resolve_catalog_identities": "supabase_resolve",
+}
+
+
 class CatalogPage(BaseModel):
     items: list[MediaItem]
     total: int
@@ -156,7 +164,8 @@ class Catalog:
             },
         )
         try:
-            with urlopen(request, timeout=8) as response:
+            stage = SUPABASE_STAGES.get(function, "supabase_" + function)
+            with observability.timed(stage), urlopen(request, timeout=8) as response:
                 body = response.read(4_000_001)
                 if len(body) > 4_000_000:
                     raise CatalogUnavailable("Catalog page is too large.")
@@ -202,6 +211,14 @@ class Catalog:
             page = self._remote({"p_id": str(media_id), "p_limit": 1})
             return page.items[0] if page.items else None
         return next((item for item in self.items() if item.id == media_id), None)
+
+    def resolve_identity(self, provider: str, entity: str, external_id: str) -> MediaItem | None:
+        """The stored catalog row for one source identity, if any (Supabase mode only)."""
+        if self.settings.catalog_source != "supabase":
+            return None
+        keys = [{"provider": provider, "entity": entity, "external_id": external_id}]
+        items = self._remote({"p_keys": keys}, "resolve_catalog_identities").items
+        return items[0] if items else None
 
     def canonical_items(self, items: list[MediaItem]) -> list[MediaItem]:
         if self.settings.catalog_source != "supabase" or not items:
