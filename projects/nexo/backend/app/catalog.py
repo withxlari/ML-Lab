@@ -123,6 +123,7 @@ class MediaItem(BaseModel):
 SUPABASE_STAGES = {
     "search_catalog": "supabase_search",
     "resolve_catalog_identities": "supabase_resolve",
+    "get_book_showcase": "supabase_showcase",
 }
 
 
@@ -152,7 +153,8 @@ class Catalog:
         path = Path(__file__).parent / "data" / "catalog.json"
         return TypeAdapter(list[MediaItem]).validate_json(path.read_text(encoding="utf-8"))
 
-    def _remote(self, payload: dict[str, object], function: str = "search_catalog") -> CatalogPage:
+    def _rpc(self, function: str, payload: dict[str, object]) -> bytes:
+        """Call a public catalog function with the publishable key; raw JSON body."""
         base = str(self.settings.supabase_url).rstrip("/")
         assert self.settings.supabase_publishable_key is not None
         request = Request(
@@ -166,12 +168,29 @@ class Catalog:
         try:
             stage = SUPABASE_STAGES.get(function, "supabase_" + function)
             with observability.timed(stage), urlopen(request, timeout=8) as response:
-                body = response.read(4_000_001)
-                if len(body) > 4_000_000:
-                    raise CatalogUnavailable("Catalog page is too large.")
-                return CatalogPage.model_validate_json(body)
-        except (URLError, TimeoutError, OSError, ValueError) as error:
+                body: bytes = response.read(4_000_001)
+        except (URLError, TimeoutError, OSError) as error:
             raise CatalogUnavailable("Supabase catalog is unavailable.") from error
+        if len(body) > 4_000_000:
+            raise CatalogUnavailable("Catalog page is too large.")
+        return body
+
+    def _remote(self, payload: dict[str, object], function: str = "search_catalog") -> CatalogPage:
+        body = self._rpc(function, payload)
+        try:
+            return CatalogPage.model_validate_json(body)
+        except ValueError as error:
+            raise CatalogUnavailable("Supabase catalog is unavailable.") from error
+
+    def book_showcase(self) -> object | None:
+        """The latest stored BookInfo shelf payload (Supabase mode only)."""
+        if self.settings.catalog_source != "supabase":
+            return None
+        try:
+            payload: object = json.loads(self._rpc("get_book_showcase", {}))
+        except ValueError as error:
+            raise CatalogUnavailable("Supabase catalog is unavailable.") from error
+        return payload
 
     def search(
         self,

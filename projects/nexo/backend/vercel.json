@@ -8,5 +8,14 @@
       "includeFiles": ".model/**",
       "excludeFiles": "{tests/**,.venv/**,.cache/**,__pycache__/**}"
     }
-  }
+  },
+  "regions": [
+    "gru1"
+  ],
+  "crons": [
+    {
+      "path": "/api/v1/internal/showcase",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }

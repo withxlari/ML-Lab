@@ -9,6 +9,7 @@ from app.account import AccountStore
 from app.api.account import create_account_router
 from app.api.community import create_community_router
 from app.api.health import router as health_router
+from app.api.internal import create_internal_router
 from app.api.media import create_media_router
 from app.api.search import create_discovery_router, create_search_router
 from app.candidates import CandidatePool
@@ -19,6 +20,7 @@ from app.personalization import PersonalizationService
 from app.request_context import RequestContextMiddleware
 from app.search import FederatedSearch
 from app.security import SecurityMiddleware
+from app.showcase import Showcase
 
 
 async def server_error_with_request_id(request: Request, error: StarletteHTTPException) -> Response:
@@ -52,17 +54,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type", "Authorization"],
         expose_headers=["X-Request-Id", "Server-Timing"],
     )
+    writer = CatalogWriter(config)
     # Added last, so it is the outermost layer: rate-limit and CORS responses also get an id.
-    application.add_middleware(
-        RequestContextMiddleware, writer=CatalogWriter(config), origins=config.cors_origins
-    )
+    application.add_middleware(RequestContextMiddleware, writer=writer, origins=config.cors_origins)
     application.include_router(health_router)
     catalog = Catalog(config)
     application.include_router(create_media_router(catalog))
-    search = FederatedSearch(config, catalog)
+    search = FederatedSearch(config, catalog, writer=writer)
+    showcase = Showcase(search)
     account = AccountStore(config, catalog)
     application.include_router(create_search_router(search))
-    application.include_router(create_discovery_router(search))
+    application.include_router(create_discovery_router(search, showcase))
+    application.include_router(create_internal_router(config, showcase, writer))
     application.include_router(
         create_account_router(account, PersonalizationService(account, CandidatePool(search)))
     )

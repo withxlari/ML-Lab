@@ -156,6 +156,40 @@ class CatalogWriter:
             )
         return saved
 
+    def save_showcase(self, week: str, payload: object) -> bool:
+        """Insert or replace the shelf of one BookInfo week."""
+        if not self.catalog_enabled:
+            return False
+        body = {"week": week, "payload": payload, "generated_at": datetime.now(UTC).isoformat()}
+        request = self._request(
+            "/rest/v1/book_showcase?on_conflict=week",
+            body,
+            "resolution=merge-duplicates,return=minimal",
+        )
+        try:
+            with observability.timed("supabase_write"), urlopen(request, WRITE_TIMEOUT) as answer:
+                answer.read(1024)
+            return True
+        except HTTPError as error:
+            log_event("showcase_write_failed", reason="http", status=error.code)
+        except (URLError, TimeoutError, OSError):
+            log_event("showcase_write_failed", reason="network")
+        return False
+
+    def cleanup_lookup_stats(self, days: int) -> int | None:
+        """Delete lookup_stats rows older than `days`. Returns how many, or None on failure."""
+        if not self.enabled:
+            return None
+        try:
+            removed = self._rpc("cleanup_lookup_stats", {"p_days": days})
+        except HTTPError as error:
+            log_event("stats_cleanup_failed", reason="http", status=error.code)
+            return None
+        except (URLError, TimeoutError, OSError, ValueError):
+            log_event("stats_cleanup_failed", reason="network")
+            return None
+        return removed if isinstance(removed, int) else None
+
     def claim_enrichment(self, slug: str) -> bool:
         """True only for the one caller allowed to complete this book today."""
         if not self.catalog_enabled:

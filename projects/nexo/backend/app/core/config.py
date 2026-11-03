@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     igdb_client_id: str | None = None
     igdb_client_secret: SecretStr | None = None
     google_books_api_key: SecretStr | None = None
+    # Vercel sends "Authorization: Bearer $CRON_SECRET" to cron routes; the name is Vercel's.
+    cron_secret: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("CRON_SECRET", "NEXO_CRON_SECRET")
+    )
+    stats_retention_days: int = Field(default=90, ge=1, le=3650)
 
     @model_validator(mode="after")
     def validate_catalog_source(self) -> "Settings":

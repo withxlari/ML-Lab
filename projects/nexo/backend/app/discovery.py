@@ -8,6 +8,7 @@ from app import observability
 from app.book_selection import BookSelection, BookSelectionInfo
 from app.catalog import CatalogPage, CatalogUnavailable, MediaItem, MediaType
 from app.search import GAME_FIELDS, FederatedSearch, NotConfigured, SourceFailure, SourceResult
+from app.showcase import Showcase
 
 TYPES: list[MediaType] = ["movie", "series", "book", "manga", "game"]
 PROVIDERS = {
@@ -26,9 +27,21 @@ class DiscoveryPage(CatalogPage):
 
 
 class Discovery:
-    def __init__(self, search: FederatedSearch) -> None:
+    def __init__(self, search: FederatedSearch, showcase: Showcase | None = None) -> None:
         self.search = search
         self.books = BookSelection(search)
+        self.showcase = showcase or Showcase(search, self.books)
+
+    def stored_books(self) -> tuple[list[MediaItem], SourceResult, BookSelectionInfo | None]:
+        """The pre-generated shelf: one Supabase read, never built on request."""
+        try:
+            shelf = self.showcase.current()
+        except CatalogUnavailable:
+            shelf = None
+        items = shelf.items if shelf else []
+        status: Any = "ok" if shelf else "unavailable"
+        source = SourceResult(provider="bookinfo", status=status, returned=len(items))
+        return items, source, shelf.info if shelf else None
 
     def fetch(self, category: MediaType) -> list[MediaItem]:
         search = self.search
@@ -81,6 +94,9 @@ class Discovery:
         return [search._game_item(by_id[key]) for key in ids if key in by_id]
 
     def category(self, category: MediaType) -> tuple[list[MediaItem], SourceResult]:
+        if category == "book" and self.showcase.enabled:
+            items, source, _ = self.stored_books()
+            return items, source
         key = "discovery:v4:" + category
         stored = self.search.metadata.get(key)
         status: Any = "ok"
@@ -139,7 +155,9 @@ class Discovery:
             unique.setdefault(identity, item)
         items = list(unique.values())
         book_info = None
-        if media_type in {None, "book"}:
+        if media_type in {None, "book"} and self.showcase.enabled:
+            book_info = self.stored_books()[2]  # served from the one-minute memory cache
+        elif media_type in {None, "book"}:
             selection = self.search.metadata.get("brazilian-books:v2")
             stale = selection is None
             selection = selection or self.search.metadata.get("brazilian-books:v2", stale=True)

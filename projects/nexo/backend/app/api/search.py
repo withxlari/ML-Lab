@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from app.catalog import MediaItem, MediaType
 from app.discovery import Discovery, DiscoveryPage
 from app.search import FederatedSearch, Provider, SearchPage, SourceFailure
+from app.showcase import Showcase
 
 
 def create_search_router(search: FederatedSearch) -> APIRouter:
@@ -49,9 +50,9 @@ def create_search_router(search: FederatedSearch) -> APIRouter:
     return router
 
 
-def create_discovery_router(search: FederatedSearch) -> APIRouter:
+def create_discovery_router(search: FederatedSearch, showcase: Showcase | None = None) -> APIRouter:
     router = APIRouter(prefix="/api/v1/discover", tags=["discovery"])
-    discovery = Discovery(search)
+    discovery = Discovery(search, showcase)
 
     @router.get("", response_model=DiscoveryPage)
     def discover(
