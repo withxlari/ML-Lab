@@ -236,8 +236,6 @@ function NexoApp({
     retry: false,
   })
   const shownItem = details.data ?? activeItem
-  const needsCatalog =
-    page === 'home' || page === 'explore' || page === 'library'
   useEffect(() => {
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
@@ -378,11 +376,13 @@ function NexoApp({
               Tentar novamente
             </button>
           </section>
-        ) : needsCatalog && catalog.isPending ? (
+        ) : isHome && catalog.isPending ? (
+          // Explore and the library keep their header and search field mounted while
+          // loading; their loading and error states render inside the results instead.
           <section className="empty-state" role="status">
             Carregando os títulos…
           </section>
-        ) : needsCatalog && catalog.isError ? (
+        ) : isHome && catalog.isError ? (
           <section className="empty-state" role="alert">
             <h1>Não conseguimos abrir o catálogo.</h1>
             <p>Tente de novo daqui a pouco.</p>
@@ -700,7 +700,24 @@ function NexoApp({
                     )}
                   </div>
                 )}
-                {visibleItems.length > 0 ? (
+                {catalog.isPending ? (
+                  <div className="empty-state" role="status">
+                    {debouncedQuery.trim()
+                      ? 'Buscando os títulos…'
+                      : 'Carregando os títulos…'}
+                  </div>
+                ) : catalog.isError ? (
+                  <div className="empty-state" role="alert">
+                    <h3>Não conseguimos abrir o catálogo.</h3>
+                    <p>Tente de novo daqui a pouco.</p>
+                    <button
+                      className="primary-button"
+                      onClick={() => void catalog.refetch()}
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : visibleItems.length > 0 ? (
                   <div className="lv-grid" aria-busy={catalog.isFetching}>
                     {visibleItems.map((item) => (
                       <MediaCard

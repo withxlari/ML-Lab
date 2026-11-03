@@ -291,10 +291,10 @@ def test_search_route_stores_books_after_responding() -> None:
     page = SearchPage(items=[google_book(), movie()], sources=[], page=1, has_more=False)
     with (
         patch("app.search.FederatedSearch.search", return_value=page),
-        patch("app.search.FederatedSearch.store_books") as store,
+        patch("app.search.FederatedSearch.store_search_results") as store,
     ):
         assert client.get("/api/v1/search?q=duna").status_code == 200
-    store.assert_called_once_with(page.items)
+    store.assert_called_once_with("duna", page.items)
 
 
 @pytest.mark.parametrize(("from_catalog", "task"), [(True, "enrich"), (False, "store_books")])

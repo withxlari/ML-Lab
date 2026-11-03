@@ -22,7 +22,7 @@ def create_search_router(search: FederatedSearch) -> APIRouter:
             raise HTTPException(422, "Digite pelo menos dois caracteres.")
         result = search.search(q.strip(), media_type, page)
         # Books found here go to the catalog after the response is sent.
-        background.add_task(search.store_books, result.items)
+        background.add_task(search.store_search_results, q, result.items)
         return result
 
     @router.get("/details/{provider}/{entity}/{external_id}", response_model=MediaItem)

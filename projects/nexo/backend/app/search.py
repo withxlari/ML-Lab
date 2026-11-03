@@ -16,12 +16,13 @@ from uuid import NAMESPACE_URL, uuid5
 from pydantic import BaseModel, ValidationError
 
 from app import observability
-from app.catalog import Catalog, CatalogUnavailable, MediaItem, MediaType, normalize
+from app.catalog import Catalog, CatalogUnavailable, MediaItem, MediaType
 from app.catalog_writer import CatalogWriter, storable_book
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
 from app.isbn import book_id, book_slug, first_isbn
 from app.metadata_cache import MetadataCache
+from app.ranking import collapse_editions, in_portuguese, rank
 from app.runtime_paths import CACHE_ROOT
 
 Record = dict[str, Any]
@@ -200,6 +201,9 @@ def make_item(provider: Provider, entity: str, external_id: str, **values: Any) 
         external_id=external_id,
         **values,
     )
+
+
+MIN_STORED_QUERY = 3
 
 
 class FederatedSearch:
@@ -568,20 +572,7 @@ class FederatedSearch:
                 book_slugs.add(item.slug)
             kept.append(item)
 
-        term = normalize(query.strip())
-        ordered = sorted(
-            kept,
-            key=lambda item: (
-                0
-                if any(
-                    normalize(t) == term
-                    for t in [item.title, item.original_title or "", *item.aliases]
-                )
-                else 1
-                if normalize(item.title).startswith(term)
-                else 2
-            ),
-        )
+        ordered = rank(collapse_editions(kept), query)
         self.metadata.remember(ordered)
         return SearchPage(
             items=ordered,
@@ -642,6 +633,16 @@ class FederatedSearch:
         except CatalogUnavailable:
             return None
         return item if item is not None and item.media_type == "book" else None
+
+    def store_search_results(self, query: str, items: list[MediaItem]) -> None:
+        """Store the books of a text search, skipping what would only add noise.
+
+        Partial words ("pr", "pri") and results in other languages mostly come from the
+        Google fallback without a language filter; they are shown but not kept.
+        """
+        if len(query.strip()) < MIN_STORED_QUERY:
+            return
+        self.store_books([item for item in items if item.language is None or in_portuguese(item)])
 
     def store_books(self, items: list[MediaItem]) -> None:
         """Write the books of a result to the catalog. Meant to run after the response."""
