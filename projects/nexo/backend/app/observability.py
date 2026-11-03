@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
@@ -36,6 +37,7 @@ STAGES = {
     "id.twitch.tv": "igdb",
 }
 REQUEST_ID = re.compile(r"[A-Za-z0-9-]{8,64}")
+NOTE_VALUE = re.compile(r"[A-Za-z0-9_-]{1,16}")
 
 logger = logging.getLogger("nexo")
 
@@ -54,11 +56,16 @@ class RequestState:
     started: float = field(default_factory=time.perf_counter)
     stages: dict[str, float] = field(default_factory=dict)
     lookups: list[LookupStat] = field(default_factory=list)
+    notes: dict[str, str] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def add_stage(self, name: str, seconds: float) -> None:
         with self.lock:
             self.stages[name] = self.stages.get(name, 0.0) + seconds
+
+    def note(self, name: str, value: str) -> None:
+        with self.lock:
+            self.notes[name] = value
 
     def add_lookup(self, stat: LookupStat) -> None:
         with self.lock:
@@ -70,6 +77,7 @@ class RequestState:
     def server_timing(self) -> str:
         with self.lock:
             parts = [f"{name};dur={seconds * 1000:.0f}" for name, seconds in self.stages.items()]
+            parts += [f'{name};desc="{value}"' for name, value in self.notes.items()]
         return ", ".join([*parts, f"total;dur={self.elapsed_ms()}"])
 
     def stage_ms(self) -> dict[str, int]:
@@ -88,6 +96,9 @@ def accept_request_id(value: str | None) -> str:
 
 def begin(request_id: str | None) -> tuple[RequestState, Any]:
     state = RequestState(accept_request_id(request_id))
+    region = os.environ.get("VERCEL_REGION", "")
+    if NOTE_VALUE.fullmatch(region):
+        state.note("region", region)
     return state, _current.set(state)
 
 
@@ -102,6 +113,19 @@ def current() -> RequestState | None:
 def request_id() -> str | None:
     state = _current.get()
     return state.request_id if state else None
+
+
+def add_ms(stage: str, milliseconds: float) -> None:
+    state = _current.get()
+    if state:
+        state.add_stage(stage, milliseconds / 1000)
+
+
+def note(name: str, value: str) -> None:
+    """A short label shown in Server-Timing, e.g. the region that served the request."""
+    state = _current.get()
+    if state and NOTE_VALUE.fullmatch(value):
+        state.note(name, value)
 
 
 @contextmanager

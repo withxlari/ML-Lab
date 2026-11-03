@@ -234,3 +234,28 @@ def test_secret_key_must_be_a_secret_key_with_https_url() -> None:
     assert Settings(
         _env_file=None, supabase_url="https://example.supabase.co", supabase_secret_key=SECRET
     ).supabase_secret_key
+
+
+def test_region_and_notes_appear_in_server_timing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VERCEL_REGION", "gru1")
+    state, token = observability.begin(None)
+    try:
+        observability.note("supabase_edge", "GRU")
+        observability.note("bad", 'x"; injected')  # never echoed into the header
+    finally:
+        observability.end(token)
+    timing = state.server_timing()
+    assert 'region;desc="gru1"' in timing and 'supabase_edge;desc="GRU"' in timing
+    assert "injected" not in timing
+
+
+def test_waiting_for_a_busy_source_is_reported_as_queue() -> None:
+    http = ProviderHTTP()
+    http.last["www.googleapis.com"] = __import__("time").monotonic()  # a call just happened
+    state, token = observability.begin(None)
+    try:
+        with patch("app.search.urlopen", return_value=response({"totalItems": 1})):
+            http.request(GOOGLE, cache=False)
+    finally:
+        observability.end(token)
+    assert state.stages["queue"] >= 0.2  # waited for the 0.3 s minimum interval

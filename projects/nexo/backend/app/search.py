@@ -108,7 +108,9 @@ class ProviderHTTP:
                 stored = self.persistent.get(key)
             if stored is not None:
                 return stored
+        waited = time.perf_counter()
         if not host_lock.acquire(timeout=5):
+            observability.add_ms("queue", (time.perf_counter() - waited) * 1000)
             raise SourceFailure("Metadata source is busy.")
         try:
             with self.lock:
@@ -120,6 +122,8 @@ class ProviderHTTP:
             interval = 1.1 if host == "openlibrary.org" else 0.3
             time.sleep(max(0, interval - (time.monotonic() - self.last.get(host, 0))))
             self.last[host] = time.monotonic()
+            # Waiting for other calls to the same source (lock + minimum interval).
+            observability.add_ms("queue", (time.perf_counter() - waited) * 1000)
             request_headers = {
                 "Accept": "application/json",
                 "User-Agent": "Nexo/0.1 (educational discovery; https://github.com/withxlari)",
