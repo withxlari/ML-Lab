@@ -170,6 +170,7 @@ class BookSelection:
             )
             self.search.metadata.remember(items)
             self.search.metadata.put(key, shelf.model_dump(mode="json"), TTL)
+            self.search.store_books(items)  # editions only known to BookInfo are skipped
             return shelf
         except (SourceFailure, ValidationError, KeyError, TypeError, ValueError):
             stored = self.search.metadata.get(key, stale=True)

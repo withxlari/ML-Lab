@@ -212,6 +212,14 @@ class Catalog:
             return page.items[0] if page.items else None
         return next((item for item in self.items() if item.id == media_id), None)
 
+    def resolve_identity(self, provider: str, entity: str, external_id: str) -> MediaItem | None:
+        """The stored catalog row for one source identity, if any (Supabase mode only)."""
+        if self.settings.catalog_source != "supabase":
+            return None
+        keys = [{"provider": provider, "entity": entity, "external_id": external_id}]
+        items = self._remote({"p_keys": keys}, "resolve_catalog_identities").items
+        return items[0] if items else None
+
     def canonical_items(self, items: list[MediaItem]) -> list[MediaItem]:
         if self.settings.catalog_source != "supabase" or not items:
             return []

@@ -17,6 +17,7 @@ from pydantic import BaseModel, ValidationError
 
 from app import observability
 from app.catalog import Catalog, CatalogUnavailable, MediaItem, MediaType, normalize
+from app.catalog_writer import CatalogWriter, storable_book
 from app.content_labels import adult_rating, explicit_game_metadata
 from app.core.config import Settings
 from app.isbn import book_id, book_slug, first_isbn
@@ -199,10 +200,15 @@ def make_item(provider: Provider, entity: str, external_id: str, **values: Any) 
 
 class FederatedSearch:
     def __init__(
-        self, settings: Settings, catalog: Catalog, cache: MetadataCache | None = None
+        self,
+        settings: Settings,
+        catalog: Catalog,
+        cache: MetadataCache | None = None,
+        writer: CatalogWriter | None = None,
     ) -> None:
         self.settings = settings
         self.catalog = catalog
+        self.writer = writer or CatalogWriter(settings)
         self.metadata = cache or MetadataCache(CACHE_ROOT / "metadata/public.sqlite3")
         self.http = ProviderHTTP(self.metadata)
         self.token: str | None = None
@@ -549,10 +555,18 @@ class FederatedSearch:
         unique: dict[tuple[str | None, str | None, str], MediaItem] = {}
         for item in collected:
             unique.setdefault(identity(item), item)
+        book_slugs: set[str] = set()
+        kept: list[MediaItem] = []
+        for item in unique.values():
+            if item.media_type == "book":
+                if item.slug in book_slugs:
+                    continue
+                book_slugs.add(item.slug)
+            kept.append(item)
 
         term = normalize(query.strip())
         ordered = sorted(
-            unique.values(),
+            kept,
             key=lambda item: (
                 0
                 if any(
@@ -573,6 +587,79 @@ class FederatedSearch:
         )
 
     def details(self, provider: Provider, entity: str, external_id: str) -> MediaItem:
+        return self.lookup(provider, entity, external_id)[0]
+
+    def lookup(self, provider: Provider, entity: str, external_id: str) -> tuple[MediaItem, bool]:
+        """Details for one work. The flag is True when the book came from the catalog."""
+        stored = self._stored_book(provider, entity, external_id)
+        if stored is not None:
+            return stored, True
+        item = self._fetch(provider, entity, external_id)
+        try:
+            canonical = self.catalog.canonical_items([item])
+        except CatalogUnavailable:
+            canonical = []
+        if canonical:
+            stored = canonical[0]
+            item = stored.model_copy(
+                update={
+                    "description": stored.description or item.description,
+                    "creators": stored.creators or item.creators,
+                    "genres": stored.genres or item.genres,
+                    "platforms": stored.platforms or item.platforms,
+                    "aliases": stored.aliases or item.aliases,
+                    "poster_path": item.poster_path or stored.poster_path,
+                    "backdrop_path": item.backdrop_path or stored.backdrop_path,
+                    "is_adult": item.is_adult or stored.is_adult,
+                    "age_rating": item.age_rating or stored.age_rating,
+                    "isbn_13": item.isbn_13 or stored.isbn_13,
+                    "language": item.language or stored.language,
+                    "publisher": item.publisher or stored.publisher,
+                    "edition_date": item.edition_date or stored.edition_date,
+                }
+            )
+        self.metadata.remember([item])
+        return item, False
+
+    def _stored_book(self, provider: str, entity: str, external_id: str) -> MediaItem | None:
+        valid = (
+            provider == "google_books"
+            and entity == "volume"
+            and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", external_id)
+        ) or (
+            provider == "open_library"
+            and entity == "work"
+            and re.fullmatch(r"OL[0-9]+W", external_id)
+        )
+        if not valid:
+            return None
+        try:
+            item = self.catalog.resolve_identity(provider, entity, external_id)
+        except CatalogUnavailable:
+            return None
+        return item if item is not None and item.media_type == "book" else None
+
+    def store_books(self, items: list[MediaItem]) -> None:
+        """Write the books of a result to the catalog. Meant to run after the response."""
+        books = [item for item in items if storable_book(item)]
+        if books:
+            self.writer.upsert_books(books)
+
+    def enrich(self, item: MediaItem) -> None:
+        """Complete a stored book missing description or cover, at most once a day."""
+        if item.description and item.poster_path:
+            return
+        if not storable_book(item) or not self.writer.claim_enrichment(item.slug):
+            return
+        assert item.provider and item.provider_entity_type and item.external_id
+        try:
+            fresh = self._fetch(item.provider, item.provider_entity_type, item.external_id)
+        except (SourceFailure, ValidationError, KeyError, TypeError, ValueError):
+            observability.log_event("enrichment_failed", provider=item.provider)
+            return
+        self.writer.upsert_books([fresh.model_copy(update={"id": item.id, "slug": item.slug})])
+
+    def _fetch(self, provider: Provider, entity: str, external_id: str) -> MediaItem:
         if (
             provider == "google_books"
             and entity == "volume"
@@ -622,28 +709,4 @@ class FederatedSearch:
             item = self._game_item(data[0])
         else:
             raise ValueError("Unsupported provider identity.")
-        try:
-            canonical = self.catalog.canonical_items([item])
-        except CatalogUnavailable:
-            canonical = []
-        if canonical:
-            stored = canonical[0]
-            item = stored.model_copy(
-                update={
-                    "description": stored.description or item.description,
-                    "creators": stored.creators or item.creators,
-                    "genres": stored.genres or item.genres,
-                    "platforms": stored.platforms or item.platforms,
-                    "aliases": stored.aliases or item.aliases,
-                    "poster_path": item.poster_path or stored.poster_path,
-                    "backdrop_path": item.backdrop_path or stored.backdrop_path,
-                    "is_adult": item.is_adult or stored.is_adult,
-                    "age_rating": item.age_rating or stored.age_rating,
-                    "isbn_13": item.isbn_13 or stored.isbn_13,
-                    "language": item.language or stored.language,
-                    "publisher": item.publisher or stored.publisher,
-                    "edition_date": item.edition_date or stored.edition_date,
-                }
-            )
-        self.metadata.remember([item])
         return item

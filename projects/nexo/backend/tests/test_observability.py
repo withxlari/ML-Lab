@@ -171,7 +171,7 @@ def test_server_errors_carry_request_id_without_internal_details(logs: list[str]
 
 def test_http_5xx_from_routes_includes_request_id() -> None:
     client = TestClient(create_app(Settings(_env_file=None, environment="test")))
-    with patch("app.search.FederatedSearch.details", side_effect=SourceFailure("down")):
+    with patch("app.search.FederatedSearch.lookup", side_effect=SourceFailure("down")):
         result = client.get(
             "/api/v1/search/details/google_books/volume/abc", headers={"x-request-id": "req-99999"}
         )
@@ -182,7 +182,7 @@ def test_http_5xx_from_routes_includes_request_id() -> None:
 
 def test_request_log_is_one_json_line_without_query_or_path_values(logs: list[str]) -> None:
     client = TestClient(create_app(Settings(_env_file=None, environment="test")))
-    with patch("app.search.FederatedSearch.details", side_effect=SourceFailure("down")):
+    with patch("app.search.FederatedSearch.lookup", side_effect=SourceFailure("down")):
         client.get("/api/v1/search/details/google_books/volume/segredo123?x=segredo456")
     line = next(line for line in logs if '"event":"request"' in line)
     record: dict[str, Any] = json.loads(line)
