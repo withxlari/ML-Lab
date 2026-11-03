@@ -23,6 +23,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request
 
+from app import observability
+
 MAX_IDLE_PER_HOST = 4
 # Servers drop idle connections after about a minute; never hand out one close to that.
 MAX_IDLE_SECONDS = 45.0
@@ -115,6 +117,17 @@ def _finish(
         connection.close()
 
 
+def _note_supabase(response: http.client.HTTPResponse) -> None:
+    # x-envoy-upstream-service-time: ms Supabase spent behind its gateway (PostgREST + DB).
+    upstream = response.headers.get("x-envoy-upstream-service-time", "")
+    if upstream.isdigit():
+        observability.add_ms("supabase_db", int(upstream))
+    # cf-ray ends with the Cloudflare data center the request entered through (GRU, MIA...).
+    ray = response.headers.get("cf-ray", "")
+    if "-" in ray:
+        observability.note("supabase_edge", ray.rsplit("-", 1)[-1])
+
+
 def urlopen(request: Request, timeout: float) -> PooledResponse:
     url = request.full_url
     parts = urlsplit(url)
@@ -141,6 +154,8 @@ def urlopen(request: Request, timeout: float) -> PooledResponse:
         except (OSError, http.client.HTTPException) as error:
             connection.close()
             raise URLError(error) from None
+        if host.endswith(".supabase.co"):
+            _note_supabase(response)
         if response.status >= 400:
             detail = response.read(ERROR_BODY_LIMIT)
             _finish(response, connection, key)

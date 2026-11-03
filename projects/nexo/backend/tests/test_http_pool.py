@@ -122,3 +122,25 @@ def test_only_https_or_local_http_is_allowed() -> None:
 def test_unreachable_host_raises_urlerror() -> None:
     with pytest.raises(URLError):
         http_pool.urlopen(Request("http://127.0.0.1:9/rpc", data=b"{}"), timeout=1)
+
+
+def test_supabase_gateway_headers_are_measured() -> None:
+    from unittest.mock import MagicMock, patch
+
+    from app import observability
+
+    fake = MagicMock()
+    fake.status = 200
+    fake.headers = {"x-envoy-upstream-service-time": "7", "cf-ray": "a5474e253bc8f613-GRU"}
+    fake.isclosed.return_value = True
+    fake.will_close = False
+    connection = MagicMock()
+    connection.getresponse.return_value = fake
+    state, token = observability.begin(None)
+    try:
+        with patch.object(http_pool._pool, "acquire", return_value=(connection, False)):
+            http_pool.urlopen(Request("https://abc.supabase.co/rest/v1/rpc/x", data=b"{}"), 5)
+    finally:
+        observability.end(token)
+    assert round(state.stages["supabase_db"] * 1000) == 7
+    assert state.notes["supabase_edge"] == "GRU"
