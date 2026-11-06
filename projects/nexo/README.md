@@ -1,14 +1,26 @@
 # Nexo
 
-Plataforma em desenvolvimento para descobrir filmes, séries, livros, mangás e jogos, organizar uma lista pessoal e receber recomendações a partir dos próprios gostos.
+Nexo is a discovery and recommendation app for movies, TV series, books, manga, and games. You can keep a personal library, track your progress, rate and review titles, and share selected favorites on an optional public profile.
 
-Publicado em https://nexo-aiproject.vercel.app. API: https://nexo-api-sooty.vercel.app/health.
+[Live app](https://nexo-aiproject.vercel.app) · [API health](https://nexo-api-sooty.vercel.app/health)
 
-## Rodar localmente
+## Run locally
 
-Requisitos: Node.js 24, Python 3.12 e uv. Na primeira instalação, execute `./scripts/setup.ps1` e preencha `backend/.env` e `frontend/.env` usando os respectivos arquivos `.env.example`.
+Install Node.js 24, Python 3.12, and uv. From the project directory, run the setup script in PowerShell.
 
-Abra dois terminais na raiz do projeto:
+```powershell
+.\scripts\setup.ps1
+```
+
+Create `backend/.env` and `frontend/.env` from their respective `.env.example` files. For a fresh Supabase project, apply the database scripts listed below. To prepare the recommendation model, run these commands from the project directory.
+
+```powershell
+Push-Location backend
+uv run python -m app.semantic
+Pop-Location
+```
+
+Start the API and frontend in separate terminals, both from the project directory.
 
 ```powershell
 .\scripts\backend.ps1 dev
@@ -18,63 +30,56 @@ Abra dois terminais na raiz do projeto:
 npm.cmd --prefix frontend run dev
 ```
 
-Site: http://127.0.0.1:5173. API: http://127.0.0.1:8000. Se a porta já estiver ocupada, confira se o servidor já está aberto antes de iniciar outro.
+The frontend runs at <http://127.0.0.1:5173> and the API at <http://127.0.0.1:8000>. If a port is occupied, check whether that service is already running.
 
-## Estrutura
+## Project structure
 
-- `frontend/`: React, TypeScript e Vite; temas claro/escuro, catálogo, lista, avaliações e perfis.
-- `backend/app/`: FastAPI, integrações de catálogo, validação de contas e recomendações.
-- `backend/tests/`: testes automatizados e testes SQL de privacidade com transação revertida.
-- `backend/*.sql`: instalação do banco. Em um projeto novo, use catálogo, conta, preferências da biblioteca, onboarding legado, comunidade, avatares, pessoas, `profile-details.sql`, `completed-and-search.sql`, `book-lookup-stats.sql` e `book-catalog-runtime.sql` (este depois de `catalog-discovery.sql`). O banco é sempre atualizado antes do código que depende dele.
-- Medição: toda resposta da API traz `X-Request-Id` e `Server-Timing` (tempo de cache, de cada fonte e total). Com `NEXO_SUPABASE_SECRET_KEY` configurada, cada chamada às fontes de livros vira uma linha em `lookup_stats`; a consulta de taxa de acerto e latência está no fim de `book-lookup-stats.sql`.
-- Catálogo de livros: com `NEXO_CATALOG_SOURCE=supabase` e a chave secreta, todo livro do Google Books ou da Open Library que aparece numa busca ou num detalhe é gravado em `catalog_items` (`origin = 'runtime'`, um por ISBN) depois da resposta. O detalhe de um livro já gravado não chama nenhuma API externa; fichas sem sinopse ou capa são completadas em segundo plano no máximo uma vez por dia. Livros gravados não aparecem na página de descoberta.
-- `scripts/`: execução, verificações e exportação para o repositório privado ML-lab.
+| Path | Purpose |
+| :--- | :--- |
+| [`frontend/`](frontend) | React, TypeScript, and Vite app with light and dark themes, discovery, libraries, reviews, and profiles |
+| [`backend/app/`](backend/app) | FastAPI application with catalog integrations, account validation, and recommendations |
+| [`backend/tests/`](backend/tests) | Automated tests and SQL privacy checks that roll back their test transactions |
+| [`scripts/`](scripts) | Local setup, development, checks, and ML Lab publishing |
 
-## Dados e recomendações
+For a fresh database, apply `catalog.sql`, `account.sql`, `library-preferences.sql`, `onboarding.sql`, `community.sql`, `avatars.sql`, `people.sql`, `profile-details.sql`, and `completed-and-search.sql` from [`backend/`](backend). Apply `catalog-discovery.sql` before `book-catalog-runtime.sql`, and install `book-lookup-stats.sql` for book lookup metrics. Apply database changes before deploying the code that depends on them.
 
-Filmes e séries usam TMDB; livros priorizam Google Books e edições em português, com Open Library como alternativa. A seleção brasileira vem da lista pública BookInfo, com fonte e período exibidos e cache de 24 horas. Mangás usam Kitsu e jogos usam IGDB. O catálogo inicial não representa todas as obras disponíveis nas buscas externas.
+## Catalog and recommendations
 
-A recomendação combina embeddings multilíngues MiniLM, gêneros, notas, favoritos, Top 5 e preferências escritas. Avaliações negativas também influenciam. O modelo roda no backend; textos privados não são enviados a uma API externa de IA. Os pesos são heurísticos e a qualidade ainda precisa de avaliação com usuários reais. Há experimentos didáticos anteriores preservados no backend.
+Movies and TV series use TMDB. Book search prioritizes Google Books and Portuguese-language editions, with Open Library as a fallback. The Brazilian book selection uses BookInfo's public rankings, displays the source and date range, and caches results for 24 hours. Manga uses Kitsu and games use IGDB. External search covers more titles than the initial catalog.
 
-Para preparar o modelo em uma instalação nova, dentro de `backend/`:
+The content-based recommender uses multilingual MiniLM embeddings through FastEmbed and ONNX Runtime to compare work descriptions and preference text. It combines semantic similarity and genres with ratings, favorites, Top 5 selections, and feedback, including negative reactions. Suggestions explain what contributed to the match. The backend runs the model locally and keeps private text away from external AI APIs. Feedback updates the ranking signals. The embedding model stays fixed, and recommendation quality is still being evaluated.
 
-```powershell
-uv run python -m app.semantic
-```
+Public metadata and vectors use a cache with expiration and size limits. The frontend waits 450 ms after typing before starting a search. Changing the featured title reuses existing results. Public cache entries exclude tokens and private text.
 
-Metadados públicos e vetores ficam em `.cache/`, com validade e limites de tamanho. As consultas públicas são reaproveitadas; trocar o destaque não faz uma nova busca. A interface espera uma pausa de 450 ms ao digitar. Não são gravados tokens ou textos privados no cache público.
+When Supabase catalog mode and `NEXO_SUPABASE_SECRET_KEY` are configured, the backend saves books returned by Google Books or Open Library after responding to search or detail requests. It stores entries by ISBN where available, with `origin = 'runtime'`. Saved details can be served from the catalog, and missing covers or descriptions are refreshed in the background at most once a day. Discovery excludes these runtime entries.
 
-## Conta e privacidade
+Responses include `X-Request-Id` and `Server-Timing` headers. With the backend Supabase secret configured, book provider calls are logged to `lookup_stats`. The queries in [`book-lookup-stats.sql`](backend/book-lookup-stats.sql) report cache hit rates and latency.
 
-Explorar é público. Guardar, avaliar, favoritar e seguir exigem conta. Supabase Auth valida a sessão; a API usa o JWT do usuário e o banco aplica RLS por proprietário. A biblioteca e os gostos permanecem privados.
+## Accounts and privacy
 
-Em Pessoas, a busca por nome ou @usuário encontra apenas perfis publicados. Nas sugestões, “Já assisti”, “Já li” e “Já joguei” adicionam a obra como concluída. “Gostei” e “Não gostei” são opiniões privadas que influenciam as recomendações, sem criar uma nota em estrelas. Essa opinião pode ser alterada ou removida na própria lista.
+Anyone can browse. Saving titles, rating them, adding favorites, and following profiles require an account. Supabase Auth validates sessions, and PostgreSQL row-level security restricts access to personal libraries and preferences.
 
-O perfil público é opcional e reúne Top 5 e avaliações explicitamente públicas. Nas configurações de perfil, é possível mostrar totais de obras concluídas e favoritos, seguidores e quem se segue. Os controles novos começam desligados. Publicar um total não publica os títulos privados. Perfis fechados não aparecem nas listas públicas de conexões.
+Public profiles are opt-in. They can include Top 5 selections, explicitly public reviews, completed and favorite counts, and follower and following information. Users control which sections appear. Totals can be shared while individual library entries stay private. Profile search only returns published profiles.
 
-Os agregados públicos são calculados por funções limitadas no schema interno `nexo_private`, com caminho fixo, verificação de perfil publicado e das opções de visibilidade. O schema não é exposto no Data API. As funções públicas são invoker; acesso direto às tabelas privadas continua bloqueado. Avatares ficam em bucket privado, com arquivo WebP de até 1 MB e links assinados de curta duração.
+Marking a recommendation as watched, read, or played records it as completed. You can add or remove a private like or dislike from your library. That reaction influences future recommendations independently of star ratings.
 
-## Segurança e publicação
+Database functions in the internal `nexo_private` schema calculate public totals after checking whether the profile is published and which sections are visible. Avatars use a private storage bucket with short-lived signed URLs and a 1 MB WebP limit.
 
-Credenciais reais ficam somente em `.env` ou nas variáveis secretas do servidor. No frontend, apenas URL da API, URL do Supabase e chave **publishable**. Nunca use service_role ou chaves privadas em variáveis `VITE_`.
+## Deployment
 
-A API limita consultas por IP e por processo, restringe corpos a 4 MB e impede cache compartilhado das respostas pessoais. A compilação do frontend inclui CSP; o arquivo `_headers` configura cabeçalhos nos serviços que o suportam. No hospedeiro escolhido, confirme cabeçalhos, HTTPS e limites na borda; múltiplos workers precisam de limitação compartilhada. Não confie em X-Forwarded-For vindo de proxies desconhecidos.
+The frontend and API deploy separately on Vercel using their respective `vercel.json` files. Keep provider credentials and the Supabase secret in backend environment variables. Frontend settings use the API URL, Supabase URL, and Supabase publishable key.
 
-Antes de abrir ao público: configure SMTP próprio, integre o widget de CAPTCHA ao formulário e ative-o no Supabase; ajuste a política de senhas, o domínio HTTPS e as URLs exatas de retorno. Ajuste `NEXO_ENVIRONMENT=production`, `NEXO_CORS_ORIGINS`, `VITE_API_BASE_URL` e URLs públicas do Supabase. O backend precisa de memória para o modelo e volume persistente para o cache; publicar só o frontend não disponibiliza a recomendação.
+Set `NEXO_ENVIRONMENT=production`, `NEXO_CORS_ORIGINS`, `VITE_API_BASE_URL`, and the public Supabase URLs for your deployment. Before opening public signups, configure custom SMTP, integrate CAPTCHA with the form and Supabase Auth, and verify password settings, HTTPS, and allowed redirect URLs. See the [Supabase plan limits](https://supabase.com/pricing) and [SMTP configuration guide](https://supabase.com/docs/guides/auth/auth-smtp).
 
-O Free confirmado na revisão oferece 50 mil usuários ativos por mês, 500 MB de banco e 1 GB de Storage, sujeitos às cotas vigentes. O SMTP padrão é de testes, restrito a membros da equipe e a dois e-mails por hora. A proteção nativa contra senhas vazadas exige Pro ou superior. Consulte os limites atuais em https://supabase.com/pricing e https://supabase.com/docs/guides/auth/auth-smtp.
+The API applies per-process IP rate limits, caps request bodies at 4 MB, and prevents shared caching of private responses. The frontend build includes a content security policy. For deployments with multiple workers, configure shared rate limiting at the edge.
 
-A revisão não substitui teste de carga ou auditoria independente. O projeto é adequado para preparar uma beta controlada; qualidade das sugestões e capacidade para tráfego público ainda precisam de medição.
+The API build prepares the model in `.model/`. Runtime caches on Vercel live in `/tmp/nexo` and are temporary per instance. For a deployment that needs to reuse cache entries across instances, use shared storage. Measure recommendation quality and traffic capacity before expanding the beta.
 
-## Verificações
+## Checks
 
 ```powershell
 .\scripts\check.ps1
 backend\.venv\Scripts\python.exe scripts/check-secrets.py
 ```
 
-A verificação de segredos examina arquivos candidatos ao Git e o histórico local, sem imprimir valores de credenciais. Mantenha testes, lockfiles, SQLs e licenças no repositório. `.env`, dependências, modelos, caches, builds e ZIPs ficam ignorados. A documentação histórica permanece arquivada localmente em `.cache/reference-docs`, fora do Git.
-
-O projeto é publicado na pasta `projects/nexo` do repositório público ML-Lab. Credenciais, modelos e dados locais não são enviados ao GitHub. Alterações locais precisam de commit e publicação explícita.
-
-Na Vercel, o frontend usa `frontend/vercel.json` e a API usa `backend/vercel.json`. O build da API prepara o modelo em `.model/`; em execução, os caches graváveis usam `/tmp/nexo`. Esse cache é temporário e separado por instância: pode haver novas consultas às fontes após reinícios. Para mais tráfego, substitua-o por um cache compartilhado e aplique limites na borda. Nunca execute o treinamento ou o download do modelo durante uma requisição.
+The secret scanner checks candidate files and local Git history without printing credential values. Keep credentials, private data, downloaded models, local environments, and build output outside Git.
