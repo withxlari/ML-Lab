@@ -18,6 +18,6 @@ Nexo helps you discover movies, TV series, books, manga, and games. Keep a perso
 
 Its content-based recommender uses multilingual MiniLM embeddings, ratings, favorites, and written preferences to suggest titles across formats and explain why they fit.
 
-**[Try Nexo](https://nexo-aiproject.vercel.app)** · [Nexo README](projects/nexo/README.md) · [Build checks](https://github.com/withxlari/ML-Lab/actions/workflows/nexo-quality.yml)
+**[Try Nexo](IN PAUSE)** · [Nexo README](projects/nexo/README.md) · [Build checks](https://github.com/withxlari/ML-Lab/actions/workflows/nexo-quality.yml)
 
 [![Screenshot of the Nexo home page](assets/nexo-preview.png)](https://nexo-aiproject.vercel.app)
